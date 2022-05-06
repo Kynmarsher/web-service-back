@@ -5,7 +5,9 @@ import com.devskiller.friendly_id.jackson.FriendlyIdModule;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import io.github.kynmarsher.webserviceback.datamodel.Room;
-import io.github.kynmarsher.webserviceback.requests.CreateRoomRequest;
+import io.github.kynmarsher.webserviceback.httpdata.CreateRoomRequest;
+import io.github.kynmarsher.webserviceback.httpdata.CreateRoomResponse;
+import io.github.kynmarsher.webserviceback.util.Utils;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -38,7 +40,12 @@ public class WebServiceBack {
             // Получаем предполагаемый номер комнаты из запроса
             final String roomId = request.params(":roomid");
             // Проверяем существует ли такая комната
-            return roomList.get(UUID.fromString(roomId));
+            if (roomList.containsKey(FriendlyId.toUuid(roomId))) {
+                return roomList.get(FriendlyId.toUuid(roomId));
+            } else {
+                response.status(404);
+                return 404;
+            }
         });
 
         // Создание комнаты
@@ -46,16 +53,27 @@ public class WebServiceBack {
             // Читаем JSON реквеста и прверащаем его в объект CreateRoomRequest
             CreateRoomRequest incomingRequest = STRICT_MAPPER.readValue(request.body(), CreateRoomRequest.class);
             // Создаем новый ID из имени которое введет пользователь
-            String creatorId = FriendlyId.toFriendlyId(UUID.fromString(incomingRequest.roomCreatorName));
+            UUID creatorId = UUID.nameUUIDFromBytes(incomingRequest.roomCreatorName.getBytes());
             // Создаем объект Room c автором запроса как с админом
             Room newRoom = new Room(creatorId);
             // Сохраняем новую комнату в список комнат
             roomList.put(newRoom.roomId(), newRoom);
-            // Возвращаем Id комнаты
-            return newRoom.roomId();
-        });
-        put("/room/:roomid", (request, response)-> {
-            return 200;
+
+            // Подготавливаем ответ клиенту
+            // Создаем CreateRoomResponse используюя паттерн Builder
+            CreateRoomResponse responseObj = CreateRoomResponse.builder()
+                    .name(incomingRequest.roomCreatorName)
+                    .roomId(newRoom.roomId())
+                    .userId(creatorId)
+                    .build();
+
+            // Выставляем статус, что все прошло успешно
+            response.status(200);
+            // Конвертируем объект ответа в Json
+            response.body(Utils.dataToJson(responseObj));
+            // Даем понять что мы будем передавать json
+            response.type("application/json");
+            return response.body();
         });
 
 
