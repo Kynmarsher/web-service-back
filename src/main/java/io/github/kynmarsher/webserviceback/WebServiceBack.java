@@ -1,5 +1,7 @@
 package io.github.kynmarsher.webserviceback;
 
+import com.corundumstudio.socketio.Configuration;
+import com.corundumstudio.socketio.SocketIOServer;
 import com.devskiller.friendly_id.FriendlyId;
 import com.devskiller.friendly_id.jackson.FriendlyIdModule;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -22,6 +24,8 @@ public class WebServiceBack {
 
     public Map<UUID, Room> roomList;
 
+    public SocketIOServer socketIOServer;
+
     public WebServiceBack() {
         roomList = new HashMap<>();
 
@@ -31,6 +35,10 @@ public class WebServiceBack {
         RESPONSE_MAPPER.registerModule(new FriendlyIdModule());
         STRICT_MAPPER = new ObjectMapper();
         STRICT_MAPPER.registerModule(new FriendlyIdModule());
+
+        final var socketIOConfig = new Configuration();
+        socketIOConfig.setPort(3200);
+        socketIOServer = new SocketIOServer(socketIOConfig);
 
 
         port(3100);
