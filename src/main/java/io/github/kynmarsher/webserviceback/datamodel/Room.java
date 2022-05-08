@@ -1,17 +1,15 @@
 package io.github.kynmarsher.webserviceback.datamodel;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 public class Room {
     private final UUID roomId;
     private final UUID adminId;
-    private final List<RoomMember> memberList;
+    private final Map<UUID,RoomMember> memberList;
 
     public Room(UUID roomCreatorId) {
         roomId = UUID.randomUUID();
-        memberList = new ArrayList<>();
+        memberList = new HashMap<>();
         adminId = roomCreatorId;
     }
 
@@ -20,6 +18,10 @@ public class Room {
     }
 
     public void addMember(RoomMember member) {
-        memberList.add(member);
+        memberList.put(member.getMemberId(), member);
+    }
+
+    public RoomMember getMember(UUID memberUUID) {
+        return memberList.get(memberUUID);
     }
 }

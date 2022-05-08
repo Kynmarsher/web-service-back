@@ -1,4 +1,4 @@
-package io.github.kynmarsher.webserviceback;
+package io.github.kynmarsher.webserviceback.socketio;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -12,4 +12,7 @@ import java.util.UUID;
 @AllArgsConstructor
 public class StartCallObject {
     private UUID roomId;
+    private String name;
+    private boolean video;
+    private boolean audio;
 }
