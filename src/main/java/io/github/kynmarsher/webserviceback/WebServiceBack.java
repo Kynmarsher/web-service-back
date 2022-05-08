@@ -1,7 +1,11 @@
 package io.github.kynmarsher.webserviceback;
 
+import com.corundumstudio.socketio.AckRequest;
 import com.corundumstudio.socketio.Configuration;
+import com.corundumstudio.socketio.SocketIOClient;
 import com.corundumstudio.socketio.SocketIOServer;
+import com.corundumstudio.socketio.listener.ConnectListener;
+import com.corundumstudio.socketio.listener.DataListener;
 import com.devskiller.friendly_id.FriendlyId;
 import com.devskiller.friendly_id.jackson.FriendlyIdModule;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -12,6 +16,7 @@ import io.github.kynmarsher.webserviceback.httpdata.CreateRoomResponse;
 import io.github.kynmarsher.webserviceback.util.Utils;
 import lombok.extern.slf4j.Slf4j;
 
+import javax.xml.crypto.Data;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -37,10 +42,7 @@ public class WebServiceBack {
         RESPONSE_MAPPER.registerModule(new FriendlyIdModule());
         STRICT_MAPPER = new ObjectMapper();
         STRICT_MAPPER.registerModule(new FriendlyIdModule());
-
-        final var socketIOConfig = new Configuration();
-        socketIOConfig.setPort(3200);
-        socketIOServer = new SocketIOServer(socketIOConfig);
+        initializeSocket();
 
 
         port(3100);
@@ -87,5 +89,14 @@ public class WebServiceBack {
         });
 
 
+    }
+
+    private void initializeSocket() {
+        final var socketIOConfig = new Configuration();
+        socketIOConfig.setPort(3200);
+        socketIOServer = new SocketIOServer(socketIOConfig);
+        socketIOServer.addConnectListener(client -> System.out.println("sosihui"));
+        socketIOServer.addEventListener("startCall", StartCallObject.class, (client, data, ackSender) -> System.out.println(data));
+        socketIOServer.start();
     }
 }
