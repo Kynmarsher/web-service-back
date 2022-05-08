@@ -10,6 +10,7 @@ import io.github.kynmarsher.webserviceback.datamodel.Room;
 import io.github.kynmarsher.webserviceback.httpdata.CreateRoomRequest;
 import io.github.kynmarsher.webserviceback.httpdata.CreateRoomResponse;
 import io.github.kynmarsher.webserviceback.util.Utils;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -17,6 +18,7 @@ import java.util.UUID;
 
 import static spark.Spark.*;
 
+@Slf4j
 public class WebServiceBack {
     // Эти поля - мапперы которые конвертируют объект в JSON и обратно в объект
     public static ObjectMapper RESPONSE_MAPPER;
