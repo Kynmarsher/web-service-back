@@ -24,7 +24,8 @@ dependencies {
     compileOnly("org.projectlombok:lombok:1.18.22")
     annotationProcessor("org.projectlombok:lombok:1.18.22")
 
-    implementation("org.slf4j:slf4j-simple:2.17.0")
+    // https://mavenlibs.com/maven/dependency/org.slf4j/slf4j-simple
+    implementation("org.slf4j:slf4j-simple:1.7.36")
     // https://mavenlibs.com/maven/dependency/com.corundumstudio.socketio/netty-socketio
     implementation("com.corundumstudio.socketio:netty-socketio:1.7.19")
 
