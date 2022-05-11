@@ -54,6 +54,7 @@ public class WebServiceBack {
             final String roomId = request.params(":roomid");
             // Проверяем существует ли такая комната
             if (roomList.containsKey(FriendlyId.toUuid(roomId))) {
+                response.status(200);
                 return roomList.get(FriendlyId.toUuid(roomId));
             } else {
                 response.status(404);
@@ -97,19 +98,19 @@ public class WebServiceBack {
         socketIOConfig.setPort(3200);
         socketIOServer = new SocketIOServer(socketIOConfig);
         socketIOServer.addEventListener("startCall", StartCallObject.class, (client, data, ackSender) -> {
-            final var roomId = FriendlyId.toFriendlyId(data.getRoomId());
-            client.joinRoom(roomId);
-            roomList.get(data.getRoomId()).addMember(new RoomMember(data.getName(), client.getSessionId(), data.isVideo(), data.isAudio()));
-            socketIOServer.getRoomOperations(roomId).sendEvent("startCall", client, data);
+            final var roomId = FriendlyId.toUuid(data.getRoomId());
+            client.joinRoom(data.getRoomId());
+            roomList.get(roomId).addMember(new RoomMember(data.getName(), client.getSessionId(), data.isVideo(), data.isAudio()));
+            socketIOServer.getRoomOperations(data.getRoomId()).sendEvent("startCall", client, data);
         });
         socketIOServer.addEventListener("createOffer", CreateOfferObject.class, (client, data, ackSender) -> {
-            final var roomId = FriendlyId.toFriendlyId(data.getRoomId());
-            socketIOServer.getRoomOperations(roomId).sendEvent("createOffer", client, data);
+            final var roomId = FriendlyId.toUuid(data.getRoomId());
+            socketIOServer.getRoomOperations(data.getRoomId()).sendEvent("createOffer", client, data);
         });
         socketIOServer.addEventListener("answerOffer", OfferAnswerObject.class, (client, data, ackSender) -> {
-            final var roomId = FriendlyId.toFriendlyId(data.getRoomId());
+            final var roomId = FriendlyId.toUuid(data.getRoomId());
             socketIOServer.getClient(data.getAnswerTo()).sendEvent("answerOffer", data);
         });
-        socketIOServer.start();
+        socketIOServer.startAsync();
     }
 }

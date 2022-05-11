@@ -11,7 +11,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 public class StartCallObject {
-    private UUID roomId;
+    private String roomId;
     private String name;
     private boolean video;
     private boolean audio;
