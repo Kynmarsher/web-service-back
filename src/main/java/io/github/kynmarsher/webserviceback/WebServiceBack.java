@@ -67,7 +67,7 @@ public class WebServiceBack {
 
             if (roomList.containsKey(data.getRoomId())) {
                 responseObj.status(true);
-                responseObj.errorMessage("Sucess");
+                responseObj.errorMessage("Success");
                 // Присоединяем в своих комнатах
                 roomList.get(data.getRoomId()).addMember(new RoomMember(data.getName(), client.getSessionId(), data.isUseVideo(), data.isUseAudio()));
                 // Присоединяем к сокет комнате
@@ -81,10 +81,9 @@ public class WebServiceBack {
             socketIOServer.getRoomOperations(data.getRoomId().toString()).sendEvent("startCall", client, data);
         });
         socketIOServer.addEventListener("createOffer", CreateOfferPacket.class, (client, data, ackSender) -> {
-            socketIOServer.getRoomOperations(data.getRoomId()).sendEvent("createOffer", client, data);
+            socketIOServer.getRoomOperations(data.getRoomId().toString()).sendEvent("createOffer", client, data);
         });
         socketIOServer.addEventListener("answerOffer", OfferAnswerPacket.class, (client, data, ackSender) -> {
-            final var roomId = FriendlyId.toUuid(data.getRoomId());
             socketIOServer.getClient(data.getAnswerTo()).sendEvent("answerOffer", data);
         });
         socketIOServer.startAsync();

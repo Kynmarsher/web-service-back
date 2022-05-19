@@ -10,7 +10,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 public class OfferAnswerPacket {
-    private String roomId;
+    private UUID roomId;
     private UUID answerTo;
-    private String answer;
+    private String answerBody;
 }
