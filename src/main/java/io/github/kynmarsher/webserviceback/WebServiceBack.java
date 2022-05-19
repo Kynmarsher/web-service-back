@@ -2,10 +2,7 @@ package io.github.kynmarsher.webserviceback;
 
 import com.corundumstudio.socketio.Configuration;
 import com.corundumstudio.socketio.SocketIOServer;
-import com.devskiller.friendly_id.FriendlyId;
-import com.devskiller.friendly_id.jackson.FriendlyIdModule;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
 import io.github.kynmarsher.webserviceback.datamodel.Room;
 import io.github.kynmarsher.webserviceback.datamodel.RoomMember;
 import io.github.kynmarsher.webserviceback.socketio.room.CreateRoomRequestPacket;
@@ -20,8 +17,6 @@ import lombok.extern.slf4j.Slf4j;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
-
-import static spark.Spark.*;
 
 @Slf4j
 public class WebServiceBack {
@@ -86,6 +81,6 @@ public class WebServiceBack {
         socketIOServer.addEventListener("answerOffer", OfferAnswerPacket.class, (client, data, ackSender) -> {
             socketIOServer.getClient(data.getAnswerTo()).sendEvent("answerOffer", data);
         });
-        socketIOServer.startAsync();
+        socketIOServer.start();
     }
 }
