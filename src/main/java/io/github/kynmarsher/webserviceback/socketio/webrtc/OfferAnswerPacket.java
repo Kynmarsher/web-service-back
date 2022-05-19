@@ -1,4 +1,4 @@
-package io.github.kynmarsher.webserviceback.socketio;
+package io.github.kynmarsher.webserviceback.socketio.webrtc;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -9,7 +9,7 @@ import java.util.UUID;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class OfferAnswerObject {
+public class OfferAnswerPacket {
     private String roomId;
     private UUID answerTo;
     private String answer;

@@ -8,12 +8,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import io.github.kynmarsher.webserviceback.datamodel.Room;
 import io.github.kynmarsher.webserviceback.datamodel.RoomMember;
-import io.github.kynmarsher.webserviceback.httpdata.CreateRoomRequest;
-import io.github.kynmarsher.webserviceback.httpdata.CreateRoomResponse;
-import io.github.kynmarsher.webserviceback.socketio.OfferAnswerObject;
-import io.github.kynmarsher.webserviceback.socketio.CreateOfferObject;
-import io.github.kynmarsher.webserviceback.socketio.StartCallObject;
-import io.github.kynmarsher.webserviceback.util.Utils;
+import io.github.kynmarsher.webserviceback.socketio.room.CreateRoomRequestPacket;
+import io.github.kynmarsher.webserviceback.socketio.room.CreateRoomResponsePacket;
+import io.github.kynmarsher.webserviceback.socketio.room.JoinRoomRequestPacket;
+import io.github.kynmarsher.webserviceback.socketio.room.JoinRoomResponsePacket;
+import io.github.kynmarsher.webserviceback.socketio.webrtc.CreateOfferPacket;
+import io.github.kynmarsher.webserviceback.socketio.webrtc.OfferAnswerPacket;
+import io.github.kynmarsher.webserviceback.socketio.webrtc.StartCallPacket;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.HashMap;
@@ -36,78 +37,53 @@ public class WebServiceBack {
 
     public WebServiceBack() {
         roomList = new HashMap<>();
-
-        // Настройка JSON мапперов
-        RESPONSE_MAPPER = new ObjectMapper();
-        RESPONSE_MAPPER.enable(SerializationFeature.INDENT_OUTPUT);
-        RESPONSE_MAPPER.registerModule(new FriendlyIdModule());
-        STRICT_MAPPER = new ObjectMapper();
-        STRICT_MAPPER.registerModule(new FriendlyIdModule());
         initializeSocket();
-
-
-        port(3100);
-
-        // Получение комнаты
-        get("/room/:roomid", (request, response) -> {
-            // Получаем предполагаемый номер комнаты из запроса
-            final String roomId = request.params(":roomid");
-            // Проверяем существует ли такая комната
-            if (roomList.containsKey(FriendlyId.toUuid(roomId))) {
-                response.status(200);
-                return roomList.get(FriendlyId.toUuid(roomId));
-            } else {
-                response.status(404);
-                return 404;
-            }
-        });
-
-        // Создание комнаты
-        post("/room", (request, response) -> {
-            // Читаем JSON реквеста и прверащаем его в объект CreateRoomRequest
-            CreateRoomRequest incomingRequest = STRICT_MAPPER.readValue(request.body(), CreateRoomRequest.class);
-            // Создаем новый ID из имени которое введет пользователь
-            UUID creatorId = UUID.nameUUIDFromBytes(incomingRequest.getRoomCreatorName().getBytes());
-            // Создаем объект Room c автором запроса как с админом
-            Room newRoom = new Room(creatorId);
-            // Сохраняем новую комнату в список комнат
-            roomList.put(newRoom.roomId(), newRoom);
-
-            // Подготавливаем ответ клиенту
-            // Создаем CreateRoomResponse используюя паттерн Builder
-            CreateRoomResponse responseObj = CreateRoomResponse.builder()
-                    .name(incomingRequest.getRoomCreatorName())
-                    .roomId(newRoom.roomId())
-                    .userId(creatorId)
-                    .build();
-
-            // Выставляем статус, что все прошло успешно
-            response.status(200);
-            // Конвертируем объект ответа в Json
-            response.body(Utils.dataToJson(responseObj));
-            // Даем понять что мы будем передавать json
-            response.type("application/json");
-            return response.body();
-        });
-
-
     }
 
     private void initializeSocket() {
         final var socketIOConfig = new Configuration();
         socketIOConfig.setPort(3200);
         socketIOServer = new SocketIOServer(socketIOConfig);
-        socketIOServer.addEventListener("startCall", StartCallObject.class, (client, data, ackSender) -> {
-            final var roomId = FriendlyId.toUuid(data.getRoomId());
-            client.joinRoom(data.getRoomId());
-            roomList.get(roomId).addMember(new RoomMember(data.getName(), client.getSessionId(), data.isVideo(), data.isAudio()));
-            socketIOServer.getRoomOperations(data.getRoomId()).sendEvent("startCall", client, data);
+
+        socketIOServer.addEventListener("createRoom", CreateRoomRequestPacket.class, (client, data, ackSender) -> {
+            Room newRoom = new Room(client.getSessionId());
+            // Сохраняем новую СВОЙ ОБЪЕКТ комнаты в список комнат
+            roomList.put(newRoom.roomId(), newRoom);
+
+            final var responseObj = CreateRoomResponsePacket.builder()
+                    .name(data.getRoomCreatorName())
+                    .roomId(newRoom.roomId())
+                    .userId(client.getSessionId())
+                    .build();
+
+
+            client.sendEvent("createRoom", responseObj);
         });
-        socketIOServer.addEventListener("createOffer", CreateOfferObject.class, (client, data, ackSender) -> {
-            final var roomId = FriendlyId.toUuid(data.getRoomId());
+        socketIOServer.addEventListener("joinRoom", JoinRoomRequestPacket.class, (client, data, ackSender) -> {
+            final var responseObj = JoinRoomResponsePacket.builder()
+                    .errorMessage("Room doesn't exist yet or expired")
+                    .status(false);
+
+
+            if (roomList.containsKey(data.getRoomId())) {
+                responseObj.status(true);
+                responseObj.errorMessage("Sucess");
+                // Присоединяем в своих комнатах
+                roomList.get(data.getRoomId()).addMember(new RoomMember(data.getName(), client.getSessionId(), data.isUseVideo(), data.isUseAudio()));
+                // Присоединяем к сокет комнате
+                client.joinRoom(data.getRoomId().toString());
+            }
+
+            client.sendEvent("joinRoom", responseObj.build());
+        });
+
+        socketIOServer.addEventListener("startCall", StartCallPacket.class, (client, data, ackSender) -> {
+            socketIOServer.getRoomOperations(data.getRoomId().toString()).sendEvent("startCall", client, data);
+        });
+        socketIOServer.addEventListener("createOffer", CreateOfferPacket.class, (client, data, ackSender) -> {
             socketIOServer.getRoomOperations(data.getRoomId()).sendEvent("createOffer", client, data);
         });
-        socketIOServer.addEventListener("answerOffer", OfferAnswerObject.class, (client, data, ackSender) -> {
+        socketIOServer.addEventListener("answerOffer", OfferAnswerPacket.class, (client, data, ackSender) -> {
             final var roomId = FriendlyId.toUuid(data.getRoomId());
             socketIOServer.getClient(data.getAnswerTo()).sendEvent("answerOffer", data);
         });

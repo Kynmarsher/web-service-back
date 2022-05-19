@@ -1,8 +1,7 @@
-package io.github.kynmarsher.webserviceback.socketio;
+package io.github.kynmarsher.webserviceback.socketio.webrtc;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
-import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.util.UUID;
@@ -10,9 +9,9 @@ import java.util.UUID;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class StartCallObject {
-    private String roomId;
+public class StartCallPacket {
     private String name;
+    private UUID roomId;
     private boolean video;
     private boolean audio;
 }
