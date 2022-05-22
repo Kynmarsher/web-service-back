@@ -41,6 +41,7 @@ public class WebServiceBack {
         socketIOServer = new SocketIOServer(socketIOConfig);
 
         socketIOServer.addEventListener("createRoom", CreateRoomRequestPacket.class, (client, data, ackSender) -> {
+            log.info("PavelDown");
             Room newRoom = new Room(client.getSessionId());
             // Сохраняем новую СВОЙ ОБЪЕКТ комнаты в список комнат
             roomList.put(newRoom.roomId(), newRoom);
