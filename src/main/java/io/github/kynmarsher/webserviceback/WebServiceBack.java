@@ -108,6 +108,7 @@ public class WebServiceBack {
 
         socketIOServer.addEventListener("createRoom", CreateRoomRequestPacket.class, (client, data, ackSender) -> {
             log.info("hui");
+            log.info("PavelDown");
             Room newRoom = new Room(client.getSessionId());
             // Сохраняем новую СВОЙ ОБЪЕКТ комнаты в список комнат
             roomList.put(newRoom.roomId(), newRoom);
@@ -150,4 +151,6 @@ public class WebServiceBack {
         });
         socketIOServer.start();
     }*/
+    }
+//    TODO start_call delete and offers naoborot
 }
