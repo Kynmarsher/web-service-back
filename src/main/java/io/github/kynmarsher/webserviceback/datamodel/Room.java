@@ -4,13 +4,13 @@ import java.util.*;
 
 public class Room {
     private final UUID roomId;
-    private final UUID adminId;
+    private final String adminId;
     private final Map<UUID,RoomMember> memberList;
 
-    public Room(UUID roomCreatorId) {
+    public Room(String clientSocketId) {
         roomId = UUID.randomUUID();
         memberList = new HashMap<>();
-        adminId = roomCreatorId;
+        adminId = clientSocketId;
     }
 
     public UUID roomId() {

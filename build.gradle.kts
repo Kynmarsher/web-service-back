@@ -18,11 +18,18 @@ dependencies {
     implementation("com.fasterxml.jackson.core:jackson-databind:2.13.2.2")
     compileOnly("org.projectlombok:lombok:1.18.22")
     annotationProcessor("org.projectlombok:lombok:1.18.22")
-
-    // https://mavenlibs.com/maven/dependency/org.slf4j/slf4j-simple
     implementation("org.slf4j:slf4j-simple:1.7.36")
-    // https://mavenlibs.com/maven/dependency/com.corundumstudio.socketio/netty-socketio
-    implementation("com.corundumstudio.socketio:netty-socketio:1.7.19")
+    implementation("io.socket:socket.io-server:4.0.1")
+    implementation("io.socket:engine.io-server:6.1.0")
+    implementation("io.socket:engine.io-server-jetty:6.1.0")
+    implementation("org.eclipse.jetty:jetty-server:9.4.19.v20190610")
+    implementation("org.eclipse.jetty:jetty-servlet:9.4.19.v20190610")
+    implementation("org.eclipse.jetty.websocket:websocket-server:9.4.46.v20220331")
+    implementation("org.eclipse.jetty:jetty-servlets:9.4.19.v20190610")
+    implementation("commons-io:commons-io:2.11.0")
+
+
+
 
 }
 

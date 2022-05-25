@@ -9,6 +9,6 @@ import java.util.UUID;
 @Builder
 public class CreateRoomResponsePacket {
     private String name;
-    private UUID userId;
+    private String userId;
     private UUID roomId;
 }
