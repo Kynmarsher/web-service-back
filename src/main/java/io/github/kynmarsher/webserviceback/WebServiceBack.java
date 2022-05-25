@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import io.github.kynmarsher.webserviceback.datamodel.Room;
 import io.socket.engineio.server.EngineIoServer;
+import io.socket.engineio.server.EngineIoServerOptions;
 import io.socket.engineio.server.JettyWebSocketHandler;
 import io.socket.socketio.server.SocketIoServer;
 import lombok.Getter;
@@ -41,13 +42,14 @@ public class WebServiceBack {
     public Map<UUID, UUID> sessionId;
 
     private final EngineIoServer mEngineIoServer;
+    private final EngineIoServerOptions eioOptions;
     private @Getter final SocketIoServer mSocketIoServer;
     private final Server mServer;
 
     public static WebServiceBack INSTANCE;
 
 
-    public WebServiceBack() {
+    public WebServiceBack(String[] allowedCorsOrigins) {
         INSTANCE = this;
         STRICT_MAPPER = new ObjectMapper();
         RESPONSE_MAPPER = new ObjectMapper();
@@ -56,7 +58,9 @@ public class WebServiceBack {
         roomList = new HashMap<>();
         // Jetty and Socket.io init
         this.mServer = new Server(new InetSocketAddress(3200));
-        this.mEngineIoServer = new EngineIoServer();
+        eioOptions = EngineIoServerOptions.newFromDefault();
+        eioOptions.setAllowedCorsOrigins(allowedCorsOrigins);
+        this.mEngineIoServer = new EngineIoServer(eioOptions);
         this.mSocketIoServer = new SocketIoServer(mEngineIoServer);
 
         System.setProperty("org.eclipse.jetty.util.log.class", "org.eclipse.jetty.util.log.StdErrLog");

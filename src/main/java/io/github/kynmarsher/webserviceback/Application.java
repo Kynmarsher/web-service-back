@@ -14,7 +14,7 @@ import static io.github.kynmarsher.webserviceback.util.Utils.dataToJson;
 @Slf4j
 public class Application {
     public static void main(String[] args){
-        WebServiceBack server = new WebServiceBack();
+        WebServiceBack server = new WebServiceBack(null);
         try {
             server.startServer();
         } catch (Exception e) {
