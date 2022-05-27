@@ -8,6 +8,8 @@ import io.github.kynmarsher.webserviceback.socketio.room.CreateRoomRequestPacket
 import io.github.kynmarsher.webserviceback.socketio.room.CreateRoomResponsePacket;
 import io.github.kynmarsher.webserviceback.socketio.room.JoinRoomRequestPacket;
 import io.github.kynmarsher.webserviceback.socketio.room.JoinRoomStatusPacket;
+import io.github.kynmarsher.webserviceback.socketio.webrtc.CreateOfferPacket;
+import io.github.kynmarsher.webserviceback.socketio.webrtc.OfferAnswerPacket;
 import io.socket.engineio.server.EngineIoServer;
 import io.socket.engineio.server.EngineIoServerOptions;
 import io.socket.engineio.server.JettyWebSocketHandler;
@@ -32,10 +34,8 @@ import javax.servlet.http.HttpServletRequestWrapper;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
+import java.util.stream.Collectors;
 
 import static io.github.kynmarsher.webserviceback.util.Utils.dataToJson;
 
@@ -117,7 +117,8 @@ public class WebServiceBack {
         final var mainNamespace = mSocketIoServer.namespace("/");
         mainNamespace.on("connection", arguments -> {
             SocketIoSocket socket = (SocketIoSocket) arguments[0];
-            System.out.println("Client " + socket.getId() + " (" + socket.getInitialHeaders().get("remote_addr") + ") has connected.");
+            log.info("[Client %s] connected".formatted(socket.getId()));
+            //System.out.println("Client " + socket.getId() + " (" + socket.getInitialHeaders().get("remote_addr") + ") has connected.");
 
             socket.on("message", msgArgs -> {
                 System.out.println("[Client " + socket.getId() + "] " + msgArgs);
@@ -150,6 +151,7 @@ public class WebServiceBack {
                     log.info("[Client %s] requested to join the room %s".formatted(socket.getId(), joinRoomRequest.roomId()));
                     final var responseObj = JoinRoomStatusPacket.builder()
                             .message("Room doesn't exist yet or expired")
+                            .userId(socket.getId())
                             .status(false);
 
 
@@ -173,7 +175,28 @@ public class WebServiceBack {
                 }
             });
 
-            // socket.on("createOffer", )
+            socket.on("createOffer", msgArgs -> {
+                try {
+                    final var offerPacket = WebServiceBack.STRICT_MAPPER.readValue(msgArgs[0].toString(), CreateOfferPacket.class);
+                    // Send Create offer to everyone in the room
+                    socket.broadcast(offerPacket.roomId().toString(), "createOffer", msgArgs[0]);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            });
+
+            socket.on("answerOffer", msgArgs -> {
+                try {
+                    final var offerAnswer = WebServiceBack.STRICT_MAPPER.readValue(msgArgs[0].toString(), OfferAnswerPacket.class);
+                    Optional<SocketIoSocket> clientOpt = Arrays.stream(mainNamespace.getAdapter().listClients(offerAnswer.roomId().toString()))
+                            .filter(client -> client.getId().equals(offerAnswer.answerTo()))
+                            .reduce((a, b) -> null);
+
+                    clientOpt.ifPresentOrElse(client -> client.send("answerOffer", msgArgs[0]), () -> { throw new RuntimeException(); });
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            });
         });
     }
 

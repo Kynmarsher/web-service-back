@@ -7,5 +7,6 @@ import lombok.Data;
 @Builder
 public class JoinRoomStatusPacket {
     private boolean status;
+    private String userId;
     private String message;
 }
