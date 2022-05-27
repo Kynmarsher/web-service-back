@@ -5,7 +5,7 @@ import java.util.*;
 public class Room {
     private final UUID roomId;
     private final String adminId;
-    private final Map<UUID,RoomMember> memberList;
+    private final Map<String,RoomMember> memberList;
 
     public Room(String clientSocketId) {
         roomId = UUID.randomUUID();
@@ -18,10 +18,10 @@ public class Room {
     }
 
     public void addMember(RoomMember member) {
-        memberList.put(member.getMemberId(), member);
+        memberList.put(member.memberId(), member);
     }
 
-    public RoomMember getMember(UUID memberUUID) {
+    public RoomMember getMember(String memberUUID) {
         return memberList.get(memberUUID);
     }
 }

@@ -3,10 +3,16 @@ package io.github.kynmarsher.webserviceback;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import io.github.kynmarsher.webserviceback.datamodel.Room;
+import io.github.kynmarsher.webserviceback.datamodel.RoomMember;
+import io.github.kynmarsher.webserviceback.socketio.room.CreateRoomRequestPacket;
+import io.github.kynmarsher.webserviceback.socketio.room.CreateRoomResponsePacket;
+import io.github.kynmarsher.webserviceback.socketio.room.JoinRoomRequestPacket;
+import io.github.kynmarsher.webserviceback.socketio.room.JoinRoomStatusPacket;
 import io.socket.engineio.server.EngineIoServer;
 import io.socket.engineio.server.EngineIoServerOptions;
 import io.socket.engineio.server.JettyWebSocketHandler;
 import io.socket.socketio.server.SocketIoServer;
+import io.socket.socketio.server.SocketIoSocket;
 import lombok.Getter;
 import lombok.experimental.Accessors;
 import lombok.extern.slf4j.Slf4j;
@@ -30,6 +36,8 @@ import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+
+import static io.github.kynmarsher.webserviceback.util.Utils.dataToJson;
 
 @Slf4j
 @Accessors(fluent = true)
@@ -103,6 +111,70 @@ public class WebServiceBack {
 
     public void stopServer() throws Exception {
         mServer.stop();
+    }
+
+    public void initializeListeners() {
+        final var mainNamespace = mSocketIoServer.namespace("/");
+        mainNamespace.on("connection", arguments -> {
+            SocketIoSocket socket = (SocketIoSocket) arguments[0];
+            System.out.println("Client " + socket.getId() + " (" + socket.getInitialHeaders().get("remote_addr") + ") has connected.");
+
+            socket.on("message", msgArgs -> {
+                System.out.println("[Client " + socket.getId() + "] " + msgArgs);
+                socket.send("message", "test message", 1);
+            });
+
+            socket.on("createRoom", msgArgs -> {
+                try {
+                    final var createRoomRequest = WebServiceBack.STRICT_MAPPER.readValue(msgArgs[0].toString(), CreateRoomRequestPacket.class);
+                    log.info("[Client %s] requested room creation".formatted(socket.getId()));
+                    Room newRoom = new Room(socket.getId());
+                    // Сохраняем новую СВОЙ ОБЪЕКТ комнаты в список комнат
+                    WebServiceBack.INSTANCE.roomList().put(newRoom.roomId(), newRoom);
+
+                    final var responseObj = CreateRoomResponsePacket.builder()
+                            .name(createRoomRequest.roomCreatorName())
+                            .roomId(newRoom.roomId())
+                            .userId(socket.getId())
+                            .build();
+                    socket.send("createRoom", dataToJson(responseObj));
+                    log.info("[Client %s] recived the room %s".formatted(socket.getId(), responseObj.getRoomId()));
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            });
+
+            socket.on("joinRoom", msgArgs -> {
+                try {
+                    final var joinRoomRequest = WebServiceBack.STRICT_MAPPER.readValue(msgArgs[0].toString(), JoinRoomRequestPacket.class);
+                    log.info("[Client %s] requested to join the room %s".formatted(socket.getId(), joinRoomRequest.roomId()));
+                    final var responseObj = JoinRoomStatusPacket.builder()
+                            .message("Room doesn't exist yet or expired")
+                            .status(false);
+
+
+                    if (roomList.containsKey(joinRoomRequest.roomId())) {
+                        responseObj.status(true);
+                        responseObj.message("Success");
+                        // Присоединяем в своих комнатах
+                        roomList.get(joinRoomRequest.roomId()).addMember(new RoomMember(joinRoomRequest.name(), socket.getId(), joinRoomRequest.useVideo(), joinRoomRequest.useAudio()));
+                        // Присоединяем к сокет комнате
+                        socket.joinRoom(joinRoomRequest.roomId().toString());
+                        // Отправляем данные всем в комнате кроме самого клиента
+                        socket.broadcast(joinRoomRequest.roomId().toString(), "joinRoom", msgArgs[0]);
+                        log.info("[Client %s] joined the room %s".formatted(socket.getId(), joinRoomRequest.roomId()));
+                    } else {
+                        log.info("[Client %s] tried non existent room %s".formatted(socket.getId(), joinRoomRequest.roomId()));
+                    }
+
+                    socket.send("joinRoom", dataToJson(responseObj.build()));
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            });
+
+            // socket.on("createOffer", )
+        });
     }
 
    /* private void initializeSocket() {

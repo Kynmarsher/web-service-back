@@ -5,7 +5,7 @@ import lombok.Data;
 
 @Data
 @Builder
-public class JoinRoomResponsePacket {
+public class JoinRoomStatusPacket {
     private boolean status;
-    private String errorMessage;
+    private String message;
 }
