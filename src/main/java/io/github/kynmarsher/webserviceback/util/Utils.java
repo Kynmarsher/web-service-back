@@ -19,7 +19,7 @@ public class Utils {
     }
 
     public static String nanoId() {
-        return NanoIdUtils.randomNanoId(NanoIdUtils.DEFAULT_NUMBER_GENERATOR, ID_ALPHABET, 8);
+        return NanoIdUtils.randomNanoId(NanoIdUtils.DEFAULT_NUMBER_GENERATOR, ID_ALPHABET, 6);
     }
 
 }

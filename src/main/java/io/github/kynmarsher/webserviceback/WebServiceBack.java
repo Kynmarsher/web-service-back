@@ -132,7 +132,7 @@ public class WebServiceBack {
                     // Сохраняем новую СВОЙ ОБЪЕКТ комнаты в список комнат
                     WebServiceBack.INSTANCE.roomList().put(newRoom.roomId(), newRoom);
 
-                    final var responseObj = new CreateRoomResponsePacket(newRoom.roomId(), socket.getId(), createRoomRequest.roomCreatorName());
+                    final var responseObj = new CreateRoomResponsePacket(newRoom.roomId(), socket.getId(), createRoomRequest.name());
                     socket.send("createRoom", dataToJson(responseObj));
                     log.info("[Client %s] received the room %s".formatted(socket.getId(), responseObj.roomId()));
                 } catch (Exception e) {
