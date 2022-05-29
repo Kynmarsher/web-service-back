@@ -118,7 +118,6 @@ public class WebServiceBack {
         mainNamespace.on("connection", arguments -> {
             SocketIoSocket socket = (SocketIoSocket) arguments[0];
             log.info("[Client %s] connected".formatted(socket.getId()));
-            //System.out.println("Client " + socket.getId() + " (" + socket.getInitialHeaders().get("remote_addr") + ") has connected.");
 
             socket.on("message", msgArgs -> {
                 System.out.println("[Client " + socket.getId() + "] " + msgArgs);
@@ -195,57 +194,4 @@ public class WebServiceBack {
             });
         });
     }
-
-   /* private void initializeSocket() {
-        final var socketIOConfig = new Configuration();
-        socketIOConfig.setPort(3200);
-        socketIOServer = new SocketIOServer(socketIOConfig);
-
-        socketIOServer.addEventListener("createRoom", CreateRoomRequestPacket.class, (client, data, ackSender) -> {
-            log.info("hui");
-            log.info("PavelDown");
-            Room newRoom = new Room(client.getSessionId());
-            // Сохраняем новую СВОЙ ОБЪЕКТ комнаты в список комнат
-            roomList.put(newRoom.roomId(), newRoom);
-
-            final var responseObj = CreateRoomResponsePacket.builder()
-                    .name(data.getRoomCreatorName())
-                    .roomId(newRoom.roomId())
-                    .userId(client.getSessionId())
-                    .build();
-
-
-            client.sendEvent("createRoom", responseObj);
-        });
-        socketIOServer.addEventListener("joinRoom", JoinRoomRequestPacket.class, (client, data, ackSender) -> {
-            final var responseObj = JoinRoomResponsePacket.builder()
-                    .errorMessage("Room doesn't exist yet or expired")
-                    .status(false);
-
-
-            if (roomList.containsKey(data.getRoomId())) {
-                responseObj.status(true);
-                responseObj.errorMessage("Success");
-                // Присоединяем в своих комнатах
-                roomList.get(data.getRoomId()).addMember(new RoomMember(data.getName(), client.getSessionId(), data.isUseVideo(), data.isUseAudio()));
-                // Присоединяем к сокет комнате
-                client.joinRoom(data.getRoomId().toString());
-            }
-
-            client.sendEvent("joinRoom", responseObj.build());
-        });
-
-        socketIOServer.addEventListener("startCall", StartCallPacket.class, (client, data, ackSender) -> {
-            socketIOServer.getRoomOperations(data.getRoomId().toString()).sendEvent("startCall", client, data);
-        });
-        socketIOServer.addEventListener("createOffer", CreateOfferPacket.class, (client, data, ackSender) -> {
-            socketIOServer.getRoomOperations(data.getRoomId().toString()).sendEvent("createOffer", client, data);
-        });
-        socketIOServer.addEventListener("answerOffer", OfferAnswerPacket.class, (client, data, ackSender) -> {
-            socketIOServer.getClient(data.getAnswerTo()).sendEvent("answerOffer", data);
-        });
-        socketIOServer.start();
-    }*/
-
-//TODO: start_call delete and offers naoborot
 }
