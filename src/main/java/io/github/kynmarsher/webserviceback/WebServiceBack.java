@@ -171,7 +171,7 @@ public class WebServiceBack {
                     final var roomInfoRequest = WebServiceBack.STRICT_MAPPER.readValue(msgArgs[0].toString(), RoomInfoRequestPacket.class);
                     log.info("[Client %s] requested to data about room %s".formatted(socket.getId(), roomInfoRequest.roomId()));
                     final var responseObj = new RoomInfoResponsePacket(roomList.containsKey(roomInfoRequest.roomId()));
-                    socket.send("joinRoom", dataToJson(responseObj));
+                    socket.send("roomInfo", dataToJson(responseObj));
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
