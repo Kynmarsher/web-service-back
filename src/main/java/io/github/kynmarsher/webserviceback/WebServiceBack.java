@@ -4,10 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import io.github.kynmarsher.webserviceback.datamodel.Room;
 import io.github.kynmarsher.webserviceback.datamodel.RoomMember;
-import io.github.kynmarsher.webserviceback.socketio.room.CreateRoomRequestPacket;
-import io.github.kynmarsher.webserviceback.socketio.room.CreateRoomResponsePacket;
-import io.github.kynmarsher.webserviceback.socketio.room.JoinRoomRequestPacket;
-import io.github.kynmarsher.webserviceback.socketio.room.JoinRoomStatusPacket;
+import io.github.kynmarsher.webserviceback.socketio.room.*;
 import io.github.kynmarsher.webserviceback.socketio.webrtc.CreateOfferPacket;
 import io.github.kynmarsher.webserviceback.socketio.webrtc.OfferAnswerPacket;
 import io.socket.engineio.server.EngineIoServer;
@@ -35,7 +32,6 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.*;
-import java.util.stream.Collectors;
 
 import static io.github.kynmarsher.webserviceback.util.Utils.dataToJson;
 
@@ -165,6 +161,17 @@ public class WebServiceBack {
                     }
 
                     socket.send("joinRoom", dataToJson(responseObj.build()));
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            });
+
+            socket.on("roomInfo", msgArgs -> {
+                try {
+                    final var roomInfoRequest = WebServiceBack.STRICT_MAPPER.readValue(msgArgs[0].toString(), RoomInfoRequestPacket.class);
+                    log.info("[Client %s] requested to data about room %s".formatted(socket.getId(), roomInfoRequest.roomId()));
+                    final var responseObj = new RoomInfoResponsePacket(roomList.containsKey(roomInfoRequest.roomId()));
+                    socket.send("joinRoom", dataToJson(responseObj));
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
