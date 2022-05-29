@@ -46,7 +46,7 @@ public class WebServiceBack {
     public static ObjectMapper RESPONSE_MAPPER;
     public static ObjectMapper STRICT_MAPPER;
     @Getter
-    public Map<UUID, Room> roomList;
+    public Map<String, Room> roomList;
     public Map<UUID, UUID> sessionId;
 
     private final EngineIoServer mEngineIoServer;
@@ -133,13 +133,9 @@ public class WebServiceBack {
                     // Сохраняем новую СВОЙ ОБЪЕКТ комнаты в список комнат
                     WebServiceBack.INSTANCE.roomList().put(newRoom.roomId(), newRoom);
 
-                    final var responseObj = CreateRoomResponsePacket.builder()
-                            .name(createRoomRequest.roomCreatorName())
-                            .roomId(newRoom.roomId())
-                            .userId(socket.getId())
-                            .build();
+                    final var responseObj = new CreateRoomResponsePacket(newRoom.roomId(), socket.getId(), createRoomRequest.roomCreatorName());
                     socket.send("createRoom", dataToJson(responseObj));
-                    log.info("[Client %s] recived the room %s".formatted(socket.getId(), responseObj.getRoomId()));
+                    log.info("[Client %s] received the room %s".formatted(socket.getId(), responseObj.roomId()));
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
@@ -161,9 +157,9 @@ public class WebServiceBack {
                         // Присоединяем в своих комнатах
                         roomList.get(joinRoomRequest.roomId()).addMember(new RoomMember(joinRoomRequest.name(), socket.getId(), joinRoomRequest.useVideo(), joinRoomRequest.useAudio()));
                         // Присоединяем к сокет комнате
-                        socket.joinRoom(joinRoomRequest.roomId().toString());
+                        socket.joinRoom(joinRoomRequest.roomId());
                         // Отправляем данные всем в комнате кроме самого клиента
-                        socket.broadcast(joinRoomRequest.roomId().toString(), "joinRoom", msgArgs[0]);
+                        socket.broadcast(joinRoomRequest.roomId(), "joinRoom", msgArgs[0]);
                         log.info("[Client %s] joined the room %s".formatted(socket.getId(), joinRoomRequest.roomId()));
                     } else {
                         log.info("[Client %s] tried non existent room %s".formatted(socket.getId(), joinRoomRequest.roomId()));
@@ -179,7 +175,7 @@ public class WebServiceBack {
                 try {
                     final var offerPacket = WebServiceBack.STRICT_MAPPER.readValue(msgArgs[0].toString(), CreateOfferPacket.class);
                     // Send Create offer to everyone in the room
-                    socket.broadcast(offerPacket.roomId().toString(), "createOffer", msgArgs[0]);
+                    socket.broadcast(offerPacket.roomId(), "createOffer", msgArgs[0]);
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
@@ -188,7 +184,7 @@ public class WebServiceBack {
             socket.on("answerOffer", msgArgs -> {
                 try {
                     final var offerAnswer = WebServiceBack.STRICT_MAPPER.readValue(msgArgs[0].toString(), OfferAnswerPacket.class);
-                    Optional<SocketIoSocket> clientOpt = Arrays.stream(mainNamespace.getAdapter().listClients(offerAnswer.roomId().toString()))
+                    Optional<SocketIoSocket> clientOpt = Arrays.stream(mainNamespace.getAdapter().listClients(offerAnswer.roomId()))
                             .filter(client -> client.getId().equals(offerAnswer.answerTo()))
                             .reduce((a, b) -> null);
 

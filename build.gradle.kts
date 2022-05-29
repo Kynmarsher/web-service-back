@@ -27,10 +27,7 @@ dependencies {
     implementation("org.eclipse.jetty.websocket:websocket-server:9.4.46.v20220331")
     implementation("org.eclipse.jetty:jetty-servlets:9.4.19.v20190610")
     implementation("commons-io:commons-io:2.11.0")
-
-
-
-
+    implementation("com.aventrix.jnanoid:jnanoid:2.0.0")
 }
 
 tasks.withType<ShadowJar> {
