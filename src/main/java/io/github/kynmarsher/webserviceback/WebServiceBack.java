@@ -7,6 +7,7 @@ import io.github.kynmarsher.webserviceback.datamodel.RoomMember;
 import io.github.kynmarsher.webserviceback.socketio.room.*;
 import io.github.kynmarsher.webserviceback.socketio.webrtc.CreateOfferPacket;
 import io.github.kynmarsher.webserviceback.socketio.webrtc.OfferAnswerPacket;
+import io.socket.engineio.server.Emitter;
 import io.socket.engineio.server.EngineIoServer;
 import io.socket.engineio.server.EngineIoServerOptions;
 import io.socket.engineio.server.JettyWebSocketHandler;
@@ -159,8 +160,8 @@ public class WebServiceBack {
                     } else {
                         log.info("[Client %s] tried non existent room %s".formatted(socket.getId(), joinRoomRequest.roomId()));
                     }
-
-                    socket.send("joinRoom", dataToJson(responseObj.build()));
+                    var callback = (SocketIoSocket.ReceivedByLocalAcknowledgementCallback) this;
+                    callback.sendAcknowledgement(dataToJson(responseObj.build()));
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
