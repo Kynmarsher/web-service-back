@@ -158,6 +158,7 @@ public class WebServiceBack {
                         // Отправляем данные всем в комнате кроме самого клиента
                         socket.broadcast(joinRoomRequest.roomId(), "joinRoom", msgArgs[0]);
                         log.info("[Client %s] joined the room %s".formatted(socket.getId(), joinRoomRequest.roomId()));
+                        socket.send("joinRoom",dataToJson(responseObj));
                     } else {
                         log.info("[Client %s] tried non existent room %s".formatted(socket.getId(), joinRoomRequest.roomId()));
                     }
