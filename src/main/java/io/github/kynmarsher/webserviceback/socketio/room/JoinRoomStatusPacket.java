@@ -1,12 +1,4 @@
 package io.github.kynmarsher.webserviceback.socketio.room;
 
-import lombok.Builder;
-import lombok.Data;
-
-@Data
-@Builder
-public class JoinRoomStatusPacket {
-    private boolean status;
-    private String userId;
-    private String message;
+public record JoinRoomStatusPacket(boolean status, String userId, String message) {
 }

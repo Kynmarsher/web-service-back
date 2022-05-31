@@ -142,15 +142,11 @@ public class WebServiceBack {
                 try {
                     final var joinRoomRequest = WebServiceBack.STRICT_MAPPER.readValue(msgArgs[0].toString(), JoinRoomRequestPacket.class);
                     log.info("[Client %s] requested to join the room %s".formatted(socket.getId(), joinRoomRequest.roomId()));
-                    final var responseObj = JoinRoomStatusPacket.builder()
-                            .message("Room doesn't exist yet or expired")
-                            .userId(socket.getId())
-                            .status(false);
+                    var responseObj = new JoinRoomStatusPacket(false, socket.getId(), "Room doesn't exist yet or expired");
 
 
                     if (roomList.containsKey(joinRoomRequest.roomId())) {
-                        responseObj.status(true);
-                        responseObj.message("Success");
+                        responseObj = new JoinRoomStatusPacket(true, socket.getId(), "success");
                         // Присоединяем в своих комнатах
                         roomList.get(joinRoomRequest.roomId()).addMember(new RoomMember(joinRoomRequest.name(), socket.getId(), joinRoomRequest.useVideo(), joinRoomRequest.useAudio()));
                         // Присоединяем к сокет комнате
