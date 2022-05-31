@@ -178,6 +178,7 @@ public class WebServiceBack {
                 try {
                     final var offerPacket = WebServiceBack.STRICT_MAPPER.readValue(msgArgs[0].toString(), CreateOfferPacket.class);
                     // Send Create offer to everyone in the room
+                    log.info("[Clinet %s] sent offer to room %s".formatted(offerPacket.offerFrom(), offerPacket.roomId()));
                     socket.broadcast(offerPacket.roomId(), "createOffer", msgArgs[0]);
                 } catch (Exception e) {
                     e.printStackTrace();
