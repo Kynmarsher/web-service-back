@@ -138,6 +138,7 @@ public class WebServiceBack {
             });
 
             socket.on("joinRoom", msgArgs -> {
+
                 try {
                     final var joinRoomRequest = WebServiceBack.STRICT_MAPPER.readValue(msgArgs[0].toString(), JoinRoomRequestPacket.class);
                     log.info("[Client %s] requested to join the room %s".formatted(socket.getId(), joinRoomRequest.roomId()));
