@@ -161,8 +161,6 @@ public class WebServiceBack {
                     } else {
                         log.info("[Client %s] tried non existent room %s".formatted(socket.getId(), joinRoomRequest.roomId()));
                     }
-                    var callback = (SocketIoSocket.ReceivedByLocalAcknowledgementCallback) this;
-                    callback.sendAcknowledgement(dataToJson(responseObj.build()));
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
