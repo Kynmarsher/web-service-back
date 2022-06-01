@@ -130,8 +130,12 @@ public class WebServiceBack {
                     WebServiceBack.INSTANCE.roomList().put(newRoom.roomId(), newRoom);
 
                     final var responseObj = new CreateRoomResponsePacket(newRoom.roomId(), socket.getId(), createRoomRequest.name());
-                    socket.send("createRoom", dataToJson(responseObj));
-                    log.info("[Client %s] received the room %s".formatted(socket.getId(), responseObj.roomId()));
+                    // socket.send("createRoom", dataToJson(responseObj));
+
+                    if (msgArgs[msgArgs.length - 1] instanceof SocketIoSocket.ReceivedByLocalAcknowledgementCallback callback) {
+                        callback.sendAcknowledgement(dataToJson(responseObj));
+                        log.info("[Client %s] received the room %s".formatted(socket.getId(), responseObj.roomId()));
+                    }
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
@@ -153,10 +157,12 @@ public class WebServiceBack {
                         socket.joinRoom(joinRoomRequest.roomId());
                         // Отправляем данные всем в комнате кроме самого клиента
                         socket.broadcast(joinRoomRequest.roomId(), "joinRoom", msgArgs[0]);
-                        log.info("[Client %s] joined the room %s".formatted(socket.getId(), joinRoomRequest.roomId()));
-                        socket.send("joinRoom",dataToJson(responseObj));
                     } else {
                         log.info("[Client %s] tried non existent room %s".formatted(socket.getId(), joinRoomRequest.roomId()));
+                    }
+                    if (msgArgs[msgArgs.length - 1] instanceof SocketIoSocket.ReceivedByLocalAcknowledgementCallback callback) {
+                        callback.sendAcknowledgement(dataToJson(responseObj));
+                        log.info("[Client %s] joined the room %s".formatted(socket.getId(), joinRoomRequest.roomId()));
                     }
                 } catch (Exception e) {
                     e.printStackTrace();
