@@ -225,23 +225,20 @@ public class WebServiceBack {
             socket.on("chatMessage", msgArgs -> {
                 try {
                     final var chatMsg = WebServiceBack.STRICT_MAPPER.readValue(msgArgs[0].toString(), IncomingChatMessagePacket.class);
-                    socket.send("chatMessage", msgArgs[0]);
-                    socket.broadcast(chatMsg.roomId(), "chatMessage", msgArgs[0]);
-                    System.out.println(chatMsg);
-                    /*if ( chatMsg.message() != null && chatMsg.message().length() <= 128 ) {
-                        *//*socket.send( "chatMessage", msgArgs[0]);
+                    if ( chatMsg.message() != null && chatMsg.message().length() <= 128 ) {
+                        mainNamespace.broadcast(chatMsg.roomId(), "chatMessage", msgArgs[0]);
                         if (msgArgs[msgArgs.length - 1] instanceof SocketIoSocket.ReceivedByLocalAcknowledgementCallback callback) {
                             final var responseObj = new GenericAnswerPacket(true, chatMsg.userId(), "Success");
                             callback.sendAcknowledgement(dataToJson(responseObj));
                             log.info("[Client %s] Room %s msg:  %s".formatted(socket.getId(), chatMsg.roomId(), chatMsg.message()));
-                        }*//*
+                        }
                     } else {
                         if (msgArgs[msgArgs.length - 1] instanceof SocketIoSocket.ReceivedByLocalAcknowledgementCallback callback) {
                             final var responseObj = new GenericAnswerPacket(false, chatMsg.userId(), "Message is too big");
                             callback.sendAcknowledgement(dataToJson(responseObj));
                             log.info("[Client %s] Sent message too big".formatted(socket.getId()));
                         }
-                    }*/
+                    }
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
