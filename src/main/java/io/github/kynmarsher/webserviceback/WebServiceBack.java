@@ -226,7 +226,7 @@ public class WebServiceBack {
                 try {
                     final var chatMsg = WebServiceBack.STRICT_MAPPER.readValue(msgArgs[0].toString(), IncomingChatMessagePacket.class);
                     if (chatMsg.message().length() <= 128) {
-                        socket.broadcast(chatMsg.roomId(), "chatMessage", msgArgs[0]);
+                        mainNamespace.broadcast(chatMsg.roomId(), "chatMessage", msgArgs[0]);
                         if (msgArgs[msgArgs.length - 1] instanceof SocketIoSocket.ReceivedByLocalAcknowledgementCallback callback) {
                             final var responseObj = new GenericAnswerPacket(true, chatMsg.authorId(), "Success");
                             callback.sendAcknowledgement(dataToJson(responseObj));
