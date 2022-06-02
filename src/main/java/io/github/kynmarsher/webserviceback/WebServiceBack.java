@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import io.github.kynmarsher.webserviceback.datamodel.Room;
 import io.github.kynmarsher.webserviceback.datamodel.RoomMember;
+import io.github.kynmarsher.webserviceback.socketio.chat.IncomingChatMessagePacket;
 import io.github.kynmarsher.webserviceback.socketio.room.*;
 import io.github.kynmarsher.webserviceback.socketio.webrtc.CreateOfferPacket;
 import io.github.kynmarsher.webserviceback.socketio.webrtc.IceCandidatePacket;
@@ -152,7 +153,10 @@ public class WebServiceBack {
                     if (roomList.containsKey(joinRoomRequest.roomId())) {
                         responseObj = new GenericAnswerPacket(true, socket.getId(), "success");
                         // Присоединяем в своих комнатах
-                        roomList.get(joinRoomRequest.roomId()).addMember(new RoomMember(joinRoomRequest.name(), socket.getId(), joinRoomRequest.useVideo(), joinRoomRequest.useAudio()));
+                        roomList.get(joinRoomRequest.roomId()).addMember(new RoomMember(joinRoomRequest.name(),
+                                socket.getId(),
+                                joinRoomRequest.useVideo(),
+                                joinRoomRequest.useAudio()));
                         // Присоединяем к сокет комнате
                         socket.joinRoom(joinRoomRequest.roomId());
                         // Отправляем данные всем в комнате кроме самого клиента
@@ -220,8 +224,21 @@ public class WebServiceBack {
 
             socket.on("chatMessage", msgArgs -> {
                 try {
-                    final var chatMsg = WebServiceBack.STRICT_MAPPER.readValue(msgArgs[0].toString(), ChatMessagePacket.class);
-                    socket.broadcast(chatMsg.roomId(), "chatMessage", msgArgs[0]);
+                    final var chatMsg = WebServiceBack.STRICT_MAPPER.readValue(msgArgs[0].toString(), IncomingChatMessagePacket.class);
+                    if (chatMsg.message().length() <= 128) {
+                        socket.broadcast(chatMsg.roomId(), "chatMessage", msgArgs[0]);
+                        if (msgArgs[msgArgs.length - 1] instanceof SocketIoSocket.ReceivedByLocalAcknowledgementCallback callback) {
+                            final var responseObj = new GenericAnswerPacket(true, chatMsg.authorId(), "Success");
+                            callback.sendAcknowledgement(dataToJson(responseObj));
+                            log.info("[Client %s] Room %s msg:  %s".formatted(socket.getId(), chatMsg.roomId(), chatMsg.message()));
+                        }
+                    } else {
+                        if (msgArgs[msgArgs.length - 1] instanceof SocketIoSocket.ReceivedByLocalAcknowledgementCallback callback) {
+                            final var responseObj = new GenericAnswerPacket(false, chatMsg.authorId(), "Message is too big");
+                            callback.sendAcknowledgement(dataToJson(responseObj));
+                            log.info("[Client %s] Sent message too big".formatted(socket.getId()));
+                        }
+                    }
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
