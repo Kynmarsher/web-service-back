@@ -228,13 +228,13 @@ public class WebServiceBack {
                     if (chatMsg.message().length() <= 128) {
                         mainNamespace.broadcast(chatMsg.roomId(), "chatMessage", msgArgs[0]);
                         if (msgArgs[msgArgs.length - 1] instanceof SocketIoSocket.ReceivedByLocalAcknowledgementCallback callback) {
-                            final var responseObj = new GenericAnswerPacket(true, chatMsg.authorId(), "Success");
+                            final var responseObj = new GenericAnswerPacket(true, chatMsg.userId(), "Success");
                             callback.sendAcknowledgement(dataToJson(responseObj));
                             log.info("[Client %s] Room %s msg:  %s".formatted(socket.getId(), chatMsg.roomId(), chatMsg.message()));
                         }
                     } else {
                         if (msgArgs[msgArgs.length - 1] instanceof SocketIoSocket.ReceivedByLocalAcknowledgementCallback callback) {
-                            final var responseObj = new GenericAnswerPacket(false, chatMsg.authorId(), "Message is too big");
+                            final var responseObj = new GenericAnswerPacket(false, chatMsg.userId(), "Message is too big");
                             callback.sendAcknowledgement(dataToJson(responseObj));
                             log.info("[Client %s] Sent message too big".formatted(socket.getId()));
                         }
