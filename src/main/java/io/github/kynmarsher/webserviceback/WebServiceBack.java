@@ -8,7 +8,6 @@ import io.github.kynmarsher.webserviceback.socketio.room.*;
 import io.github.kynmarsher.webserviceback.socketio.webrtc.CreateOfferPacket;
 import io.github.kynmarsher.webserviceback.socketio.webrtc.IceCandidatePacket;
 import io.github.kynmarsher.webserviceback.socketio.webrtc.OfferAnswerPacket;
-import io.socket.engineio.server.Emitter;
 import io.socket.engineio.server.EngineIoServer;
 import io.socket.engineio.server.EngineIoServerOptions;
 import io.socket.engineio.server.JettyWebSocketHandler;
@@ -147,11 +146,11 @@ public class WebServiceBack {
                 try {
                     final var joinRoomRequest = WebServiceBack.STRICT_MAPPER.readValue(msgArgs[0].toString(), JoinRoomRequestPacket.class);
                     log.info("[Client %s] requested to join the room %s".formatted(socket.getId(), joinRoomRequest.roomId()));
-                    var responseObj = new JoinRoomStatusPacket(false, socket.getId(), "Room doesn't exist yet or expired");
+                    var responseObj = new GenericAnswerPacket(false, socket.getId(), "Room doesn't exist yet or expired");
 
 
                     if (roomList.containsKey(joinRoomRequest.roomId())) {
-                        responseObj = new JoinRoomStatusPacket(true, socket.getId(), "success");
+                        responseObj = new GenericAnswerPacket(true, socket.getId(), "success");
                         // Присоединяем в своих комнатах
                         roomList.get(joinRoomRequest.roomId()).addMember(new RoomMember(joinRoomRequest.name(), socket.getId(), joinRoomRequest.useVideo(), joinRoomRequest.useAudio()));
                         // Присоединяем к сокет комнате
@@ -181,6 +180,7 @@ public class WebServiceBack {
                 }
             });
 
+            // WebRTC
             socket.on("createOffer", msgArgs -> {
                 try {
                     final var offerPacket = WebServiceBack.STRICT_MAPPER.readValue(msgArgs[0].toString(), CreateOfferPacket.class);
@@ -192,6 +192,7 @@ public class WebServiceBack {
                 }
             });
 
+            // WebRTC
             socket.on("answerOffer", msgArgs -> {
                 try {
                     final var offerAnswer = WebServiceBack.STRICT_MAPPER.readValue(msgArgs[0].toString(), OfferAnswerPacket.class);
@@ -207,10 +208,20 @@ public class WebServiceBack {
                 }
             });
 
+            // WebRTC
             socket.on("iceCandidate", msgArgs -> {
                 try {
                     final var iceCandidatePacket = WebServiceBack.STRICT_MAPPER.readValue(msgArgs[0].toString(), IceCandidatePacket.class);
                     socket.broadcast(iceCandidatePacket.roomId(), "iceCandidate", msgArgs[0]);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            });
+
+            socket.on("chatMessage", msgArgs -> {
+                try {
+                    final var chatMsg = WebServiceBack.STRICT_MAPPER.readValue(msgArgs[0].toString(), ChatMessagePacket.class);
+                    socket.broadcast(chatMsg.roomId(), "chatMessage", msgArgs[0]);
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
