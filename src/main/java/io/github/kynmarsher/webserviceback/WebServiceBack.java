@@ -225,7 +225,7 @@ public class WebServiceBack {
             socket.on("chatMessage", msgArgs -> {
                 try {
                     final var chatMsg = WebServiceBack.STRICT_MAPPER.readValue(msgArgs[0].toString(), IncomingChatMessagePacket.class);
-                    socket.broadcast(chatMsg.roomId(), "chatMessage", msgArgs[0]);
+                    socket.broadcast(chatMsg.roomId(), "chatMessageReceive", msgArgs[0]);
                     System.out.println(chatMsg);
                     if ( chatMsg.message() != null && chatMsg.message().length() <= 128 ) {
                         /*socket.send( "chatMessage", msgArgs[0]);
