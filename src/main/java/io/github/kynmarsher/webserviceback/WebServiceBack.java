@@ -194,11 +194,14 @@ public class WebServiceBack {
             socket.on("answerOffer", msgArgs -> {
                 try {
                     final var offerAnswer = WebServiceBack.STRICT_MAPPER.readValue(msgArgs[0].toString(), OfferAnswerPacket.class);
-                    Optional<SocketIoSocket> clientOpt = Arrays.stream(mainNamespace.getAdapter().listClients(offerAnswer.roomId()))
+                    var clientOpt = Arrays.stream(mainNamespace.getAdapter().listClients(offerAnswer.roomId()))
                             .filter(client -> client.getId().equals(offerAnswer.answerTo()))
                             .reduce((a, b) -> null);
 
-                    clientOpt.ifPresentOrElse(client -> client.send("answerOffer", msgArgs[0]), () -> { throw new RuntimeException(); });
+                    clientOpt.ifPresentOrElse(client -> client.send("answerOffer", msgArgs[0]), () -> {
+                        log.info("[Clinet %s] don't know %s".formatted(socket.getId(), offerAnswer.answerTo());
+                        log.info(Arrays.toString(mainNamespace.getAdapter().listClients(offerAnswer.roomId())));
+                    });
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
