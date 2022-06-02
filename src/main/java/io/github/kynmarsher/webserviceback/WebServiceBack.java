@@ -6,6 +6,7 @@ import io.github.kynmarsher.webserviceback.datamodel.Room;
 import io.github.kynmarsher.webserviceback.datamodel.RoomMember;
 import io.github.kynmarsher.webserviceback.socketio.room.*;
 import io.github.kynmarsher.webserviceback.socketio.webrtc.CreateOfferPacket;
+import io.github.kynmarsher.webserviceback.socketio.webrtc.IceCandidatePacket;
 import io.github.kynmarsher.webserviceback.socketio.webrtc.OfferAnswerPacket;
 import io.socket.engineio.server.Emitter;
 import io.socket.engineio.server.EngineIoServer;
@@ -185,9 +186,6 @@ public class WebServiceBack {
                     final var offerPacket = WebServiceBack.STRICT_MAPPER.readValue(msgArgs[0].toString(), CreateOfferPacket.class);
                     // Send Create offer to everyone in the room
                     log.info("[Clinet %s] sent offer to room %s".formatted(offerPacket.offerFrom(), offerPacket.roomId()));
-                    log.info("offer:");
-                    log.info(offerPacket.toString());
-                    log.info(msgArgs[0].toString());
                     socket.broadcast(offerPacket.roomId(), "createOffer", msgArgs[0]);
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -200,14 +198,19 @@ public class WebServiceBack {
                     var clientOpt = Arrays.stream(mainNamespace.getAdapter().listClients(offerAnswer.roomId()))
                             .filter(client -> client.getId().equals(offerAnswer.answerTo()))
                             .reduce((a, b) -> null);
-                    log.info("offer:");
-                    log.info(offerAnswer.toString());
-                    log.info(msgArgs[0].toString());
-
                     clientOpt.ifPresentOrElse(client -> client.send("answerOffer", msgArgs[0]), () -> {
                         log.info("[Clinet %s] don't know %s".formatted(socket.getId(), offerAnswer.answerTo()));
                         log.info(Arrays.toString(mainNamespace.getAdapter().listClients(offerAnswer.roomId())));
                     });
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            });
+
+            socket.on("iceCandidate", msgArgs -> {
+                try {
+                    final var iceCandidatePacket = WebServiceBack.STRICT_MAPPER.readValue(msgArgs[0].toString(), IceCandidatePacket.class);
+                    socket.broadcast(iceCandidatePacket.roomId(), "iceCandidate", msgArgs[0]);
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
