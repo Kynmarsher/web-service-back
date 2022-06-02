@@ -185,6 +185,9 @@ public class WebServiceBack {
                     final var offerPacket = WebServiceBack.STRICT_MAPPER.readValue(msgArgs[0].toString(), CreateOfferPacket.class);
                     // Send Create offer to everyone in the room
                     log.info("[Clinet %s] sent offer to room %s".formatted(offerPacket.offerFrom(), offerPacket.roomId()));
+                    log.info("offer:");
+                    log.info(offerPacket.toString());
+                    log.info(msgArgs[0].toString());
                     socket.broadcast(offerPacket.roomId(), "createOffer", msgArgs[0]);
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -197,6 +200,9 @@ public class WebServiceBack {
                     var clientOpt = Arrays.stream(mainNamespace.getAdapter().listClients(offerAnswer.roomId()))
                             .filter(client -> client.getId().equals(offerAnswer.answerTo()))
                             .reduce((a, b) -> null);
+                    log.info("offer:");
+                    log.info(offerAnswer.toString());
+                    log.info(msgArgs[0].toString());
 
                     clientOpt.ifPresentOrElse(client -> client.send("answerOffer", msgArgs[0]), () -> {
                         log.info("[Clinet %s] don't know %s".formatted(socket.getId(), offerAnswer.answerTo()));
