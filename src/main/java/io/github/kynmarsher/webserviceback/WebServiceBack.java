@@ -199,7 +199,7 @@ public class WebServiceBack {
                             .reduce((a, b) -> null);
 
                     clientOpt.ifPresentOrElse(client -> client.send("answerOffer", msgArgs[0]), () -> {
-                        log.info("[Clinet %s] don't know %s".formatted(socket.getId(), offerAnswer.answerTo());
+                        log.info("[Clinet %s] don't know %s".formatted(socket.getId(), offerAnswer.answerTo()));
                         log.info(Arrays.toString(mainNamespace.getAdapter().listClients(offerAnswer.roomId())));
                     });
                 } catch (Exception e) {
