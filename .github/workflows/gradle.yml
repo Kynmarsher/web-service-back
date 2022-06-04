@@ -51,4 +51,4 @@ jobs:
         HOST: 188.120.242.182
         USER: root
         PRIVATE_SSH_KEY: ${{ secrets.SSH }}
-        COMMAND: "systecmctl restart backend"
+        COMMAND: "systemctl restart backend"
