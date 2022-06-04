@@ -204,6 +204,7 @@ public class WebServiceBack {
             socket.on("answerOffer", msgArgs -> {
                 try {
                     final var offerAnswer = WebServiceBack.STRICT_MAPPER.readValue(msgArgs[0].toString(), OfferAnswerPacket.class);
+                    log.info("[Clinet %s] [Room %s] sent answer to %s".formatted(offerAnswer.answerFrom(), offerAnswer.roomId(), offerAnswer.answerTo()));
                     var clientOpt = Arrays.stream(mainNamespace.getAdapter().listClients(offerAnswer.roomId()))
                             .filter(client -> client.getId().equals(offerAnswer.answerTo()))
                             .reduce((a, b) -> null);
