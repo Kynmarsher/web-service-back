@@ -44,7 +44,7 @@ jobs:
         # The user with which to rsync the website to destination
         deployment_user: root
         # The local directory to deploy to the remote host
-        source_dir: "build/libs"
+        source_dir: "build/libs/"
     - name: SSH Command
       uses: D3rHase/ssh-command-action@v0.2.1
       with:
