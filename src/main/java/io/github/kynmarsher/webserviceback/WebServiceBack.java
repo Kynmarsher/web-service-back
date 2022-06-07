@@ -143,7 +143,6 @@ public class WebServiceBack {
             });
 
             socket.on("joinRoom", msgArgs -> {
-
                 try {
                     final var joinRoomRequest = WebServiceBack.STRICT_MAPPER.readValue(msgArgs[0].toString(), JoinRoomRequestPacket.class);
                     log.info("[Client %s] requested to join the room %s".formatted(socket.getId(), joinRoomRequest.roomId()));
@@ -230,7 +229,7 @@ public class WebServiceBack {
                 try {
                     final var chatMsg = WebServiceBack.STRICT_MAPPER.readValue(msgArgs[0].toString(), IncomingChatMessagePacket.class);
                     if ( chatMsg.message() != null && chatMsg.message().length() <= 128 ) {
-                        mainNamespace.broadcast(chatMsg.roomId(), "chatMessage", msgArgs[0]);
+                        socket.broadcast(chatMsg.roomId(), "chatMessage", msgArgs[0]);
                         if (msgArgs[msgArgs.length - 1] instanceof SocketIoSocket.ReceivedByLocalAcknowledgementCallback callback) {
                             final var responseObj = new GenericAnswerPacket(true, chatMsg.userId(), "Success");
                             callback.sendAcknowledgement(dataToJson(responseObj));

@@ -1,6 +1,5 @@
 package io.github.kynmarsher.webserviceback;
 
-import com.aventrix.jnanoid.jnanoid.NanoIdUtils;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
