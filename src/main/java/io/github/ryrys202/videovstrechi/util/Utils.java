@@ -1,7 +1,7 @@
-package io.github.kynmarsher.webserviceback.util;
+package io.github.ryrys202.videovstrechi.util;
 
 import com.aventrix.jnanoid.jnanoid.NanoIdUtils;
-import io.github.kynmarsher.webserviceback.WebServiceBack;
+import io.github.ryrys202.videovstrechi.Videovstrechi;
 import lombok.SneakyThrows;
 import lombok.experimental.UtilityClass;
 
@@ -14,7 +14,7 @@ public class Utils {
     @SneakyThrows
     public static String dataToJson(Object data) {
         StringWriter sw = new StringWriter();
-        WebServiceBack.RESPONSE_MAPPER.writeValue(sw, data);
+        Videovstrechi.RESPONSE_MAPPER.writeValue(sw, data);
         return sw.toString();
     }
 

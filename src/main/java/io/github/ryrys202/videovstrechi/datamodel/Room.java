@@ -1,6 +1,6 @@
-package io.github.kynmarsher.webserviceback.datamodel;
+package io.github.ryrys202.videovstrechi.datamodel;
 
-import io.github.kynmarsher.webserviceback.util.Utils;
+import io.github.ryrys202.videovstrechi.util.Utils;
 
 import java.util.*;
 

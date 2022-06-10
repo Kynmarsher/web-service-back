@@ -1,4 +1,4 @@
-package io.github.kynmarsher.webserviceback;
+package io.github.ryrys202.videovstrechi;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -22,7 +22,7 @@ import javax.servlet.http.HttpServletRequestWrapper;
  * @author wf
  *
  */
-public class RemoteAddrFilter implements Filter {
+public class RemoteAddressFilter implements Filter {
 
     @Override
     public void destroy() {

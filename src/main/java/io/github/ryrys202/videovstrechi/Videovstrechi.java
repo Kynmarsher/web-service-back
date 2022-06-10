@@ -1,14 +1,15 @@
-package io.github.kynmarsher.webserviceback;
+package io.github.ryrys202.videovstrechi;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
-import io.github.kynmarsher.webserviceback.datamodel.Room;
-import io.github.kynmarsher.webserviceback.datamodel.RoomMember;
-import io.github.kynmarsher.webserviceback.socketio.chat.IncomingChatMessagePacket;
-import io.github.kynmarsher.webserviceback.socketio.room.*;
-import io.github.kynmarsher.webserviceback.socketio.webrtc.CreateOfferPacket;
-import io.github.kynmarsher.webserviceback.socketio.webrtc.IceCandidatePacket;
-import io.github.kynmarsher.webserviceback.socketio.webrtc.OfferAnswerPacket;
+import io.github.ryrys202.videovstrechi.datamodel.Room;
+import io.github.ryrys202.videovstrechi.datamodel.RoomMember;
+import io.github.ryrys202.videovstrechi.socketio.chat.IncomingChatMessagePacket;
+import io.github.ryrys202.videovstrechi.socketio.room.*;
+import io.github.ryrys202.videovstrechi.socketio.webrtc.CreateOfferPacket;
+import io.github.ryrys202.videovstrechi.socketio.webrtc.IceCandidatePacket;
+import io.github.ryrys202.videovstrechi.socketio.webrtc.OfferAnswerPacket;
+import io.github.ryrys202.videovstrechi.util.Utils;
 import io.socket.engineio.server.EngineIoServer;
 import io.socket.engineio.server.EngineIoServerOptions;
 import io.socket.engineio.server.JettyWebSocketHandler;
@@ -35,12 +36,9 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.*;
 
-import static io.github.kynmarsher.webserviceback.util.Utils.dataToJson;
-
 @Slf4j
 @Accessors(fluent = true)
-public class WebServiceBack {
-    // Эти поля - мапперы которые конвертируют объект в JSON и обратно в объект
+public class Videovstrechi {
     public static ObjectMapper RESPONSE_MAPPER;
     public static ObjectMapper STRICT_MAPPER;
     @Getter
@@ -52,10 +50,10 @@ public class WebServiceBack {
     private @Getter final SocketIoServer mSocketIoServer;
     private final Server mServer;
 
-    public static WebServiceBack INSTANCE;
+    public static Videovstrechi INSTANCE;
 
 
-    public WebServiceBack(String[] allowedCorsOrigins) {
+    public Videovstrechi(String[] allowedCorsOrigins) {
         INSTANCE = this;
         STRICT_MAPPER = new ObjectMapper();
         RESPONSE_MAPPER = new ObjectMapper();
@@ -74,7 +72,7 @@ public class WebServiceBack {
 
         final var servletContextHandler = new ServletContextHandler(ServletContextHandler.SESSIONS);
         servletContextHandler.setContextPath("/");
-        servletContextHandler.addFilter(RemoteAddrFilter.class, "/socket.io/*", EnumSet.of(DispatcherType.REQUEST));
+        servletContextHandler.addFilter(RemoteAddressFilter.class, "/socket.io/*", EnumSet.of(DispatcherType.REQUEST));
 
 
         servletContextHandler.addServlet(new ServletHolder(new HttpServlet() {
@@ -117,24 +115,17 @@ public class WebServiceBack {
             SocketIoSocket socket = (SocketIoSocket) arguments[0];
             log.info("[Client %s] connected".formatted(socket.getId()));
 
-            socket.on("message", msgArgs -> {
-                System.out.println("[Client " + socket.getId() + "] " + msgArgs);
-                socket.send("message", "test message", 1);
-            });
-
             socket.on("createRoom", msgArgs -> {
                 try {
-                    final var createRoomRequest = WebServiceBack.STRICT_MAPPER.readValue(msgArgs[0].toString(), CreateRoomRequestPacket.class);
+                    final var createRoomRequest = Videovstrechi.STRICT_MAPPER.readValue(msgArgs[0].toString(), CreateRoomRequestPacket.class);
                     log.info("[Client %s] requested room creation".formatted(socket.getId()));
                     Room newRoom = new Room(socket.getId());
-                    // Сохраняем новую СВОЙ ОБЪЕКТ комнаты в список комнат
-                    WebServiceBack.INSTANCE.roomList().put(newRoom.roomId(), newRoom);
+                    Videovstrechi.INSTANCE.roomList().put(newRoom.roomId(), newRoom);
 
                     final var responseObj = new CreateRoomResponsePacket(newRoom.roomId(), socket.getId(), createRoomRequest.name());
-                    // socket.send("createRoom", dataToJson(responseObj));
 
                     if (msgArgs[msgArgs.length - 1] instanceof SocketIoSocket.ReceivedByLocalAcknowledgementCallback callback) {
-                        callback.sendAcknowledgement(dataToJson(responseObj));
+                        callback.sendAcknowledgement(Utils.dataToJson(responseObj));
                         log.info("[Client %s] received the room %s".formatted(socket.getId(), responseObj.roomId()));
                     }
                 } catch (Exception e) {
@@ -144,40 +135,28 @@ public class WebServiceBack {
 
             socket.on("joinRoom", msgArgs -> {
                 try {
-                    final var joinRoomRequest = WebServiceBack.STRICT_MAPPER.readValue(msgArgs[0].toString(), JoinRoomRequestPacket.class);
+                    final var joinRoomRequest = Videovstrechi.STRICT_MAPPER.readValue(msgArgs[0].toString(), JoinRoomRequestPacket.class);
                     log.info("[Client %s] requested to join the room %s".formatted(socket.getId(), joinRoomRequest.roomId()));
                     var responseObj = new GenericAnswerPacket(false, socket.getId(), "Room doesn't exist yet or expired");
 
 
                     if (roomList.containsKey(joinRoomRequest.roomId())) {
                         responseObj = new GenericAnswerPacket(true, socket.getId(), "success");
-                        // Присоединяем в своих комнатах
+
                         roomList.get(joinRoomRequest.roomId()).addMember(new RoomMember(joinRoomRequest.name(),
                                 socket.getId(),
                                 joinRoomRequest.useVideo(),
                                 joinRoomRequest.useAudio()));
-                        // Присоединяем к сокет комнате
                         socket.joinRoom(joinRoomRequest.roomId());
-                        // Отправляем данные всем в комнате кроме самого клиента
+
                         socket.broadcast(joinRoomRequest.roomId(), "joinRoom", msgArgs[0]);
                     } else {
                         log.info("[Client %s] tried non existent room %s".formatted(socket.getId(), joinRoomRequest.roomId()));
                     }
                     if (msgArgs[msgArgs.length - 1] instanceof SocketIoSocket.ReceivedByLocalAcknowledgementCallback callback) {
-                        callback.sendAcknowledgement(dataToJson(responseObj));
+                        callback.sendAcknowledgement(Utils.dataToJson(responseObj));
                         log.info("[Client %s] joined the room %s".formatted(socket.getId(), joinRoomRequest.roomId()));
                     }
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            });
-
-            socket.on("roomInfo", msgArgs -> {
-                try {
-                    final var roomInfoRequest = WebServiceBack.STRICT_MAPPER.readValue(msgArgs[0].toString(), RoomInfoRequestPacket.class);
-                    log.info("[Client %s] requested to data about room %s".formatted(socket.getId(), roomInfoRequest.roomId()));
-                    final var responseObj = new RoomInfoResponsePacket(roomList.containsKey(roomInfoRequest.roomId()));
-                    socket.send("roomInfo", dataToJson(responseObj));
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
@@ -186,8 +165,8 @@ public class WebServiceBack {
             // WebRTC
             socket.on("createOffer", msgArgs -> {
                 try {
-                    final var offerPacket = WebServiceBack.STRICT_MAPPER.readValue(msgArgs[0].toString(), CreateOfferPacket.class);
-                    // Send Create offer to specific user
+                    final var offerPacket = Videovstrechi.STRICT_MAPPER.readValue(msgArgs[0].toString(), CreateOfferPacket.class);
+
                     log.info("[Clinet %s] [Room %s] sent offer to client %s".formatted(offerPacket.offerFrom(), offerPacket.roomId(), offerPacket.offerTo()));
                     var clientOpt = Arrays.stream(mainNamespace.getAdapter().listClients(offerPacket.roomId()))
                             .filter(client -> client.getId().equals(offerPacket.offerTo()))
@@ -202,7 +181,7 @@ public class WebServiceBack {
             // WebRTC
             socket.on("answerOffer", msgArgs -> {
                 try {
-                    final var offerAnswer = WebServiceBack.STRICT_MAPPER.readValue(msgArgs[0].toString(), OfferAnswerPacket.class);
+                    final var offerAnswer = Videovstrechi.STRICT_MAPPER.readValue(msgArgs[0].toString(), OfferAnswerPacket.class);
                     log.info("[Clinet %s] [Room %s] sent answer to %s".formatted(offerAnswer.answerFrom(), offerAnswer.roomId(), offerAnswer.answerTo()));
                     var clientOpt = Arrays.stream(mainNamespace.getAdapter().listClients(offerAnswer.roomId()))
                             .filter(client -> client.getId().equals(offerAnswer.answerTo()))
@@ -218,7 +197,7 @@ public class WebServiceBack {
             // WebRTC
             socket.on("iceCandidate", msgArgs -> {
                 try {
-                    final var iceCandidatePacket = WebServiceBack.STRICT_MAPPER.readValue(msgArgs[0].toString(), IceCandidatePacket.class);
+                    final var iceCandidatePacket = Videovstrechi.STRICT_MAPPER.readValue(msgArgs[0].toString(), IceCandidatePacket.class);
                     socket.broadcast(iceCandidatePacket.roomId(), "iceCandidate", msgArgs[0]);
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -227,18 +206,18 @@ public class WebServiceBack {
 
             socket.on("chatMessage", msgArgs -> {
                 try {
-                    final var chatMsg = WebServiceBack.STRICT_MAPPER.readValue(msgArgs[0].toString(), IncomingChatMessagePacket.class);
+                    final var chatMsg = Videovstrechi.STRICT_MAPPER.readValue(msgArgs[0].toString(), IncomingChatMessagePacket.class);
                     if ( chatMsg.message() != null && chatMsg.message().length() <= 128 ) {
                         socket.broadcast(chatMsg.roomId(), "chatMessage", msgArgs[0]);
                         if (msgArgs[msgArgs.length - 1] instanceof SocketIoSocket.ReceivedByLocalAcknowledgementCallback callback) {
                             final var responseObj = new GenericAnswerPacket(true, chatMsg.userId(), "Success");
-                            callback.sendAcknowledgement(dataToJson(responseObj));
+                            callback.sendAcknowledgement(Utils.dataToJson(responseObj));
                             log.info("[Client %s] Room %s msg:  %s".formatted(socket.getId(), chatMsg.roomId(), chatMsg.message()));
                         }
                     } else {
                         if (msgArgs[msgArgs.length - 1] instanceof SocketIoSocket.ReceivedByLocalAcknowledgementCallback callback) {
                             final var responseObj = new GenericAnswerPacket(false, chatMsg.userId(), "Message is too big");
-                            callback.sendAcknowledgement(dataToJson(responseObj));
+                            callback.sendAcknowledgement(Utils.dataToJson(responseObj));
                             log.info("[Client %s] Sent message too big".formatted(socket.getId()));
                         }
                     }
