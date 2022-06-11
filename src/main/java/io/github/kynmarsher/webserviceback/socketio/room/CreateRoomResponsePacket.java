@@ -5,5 +5,5 @@ import lombok.Data;
 
 import java.util.UUID;
 
-public record CreateRoomResponsePacket(String roomId, String userId, String name) {
+public record CreateRoomResponsePacket(String roomId, String userId) {
 }

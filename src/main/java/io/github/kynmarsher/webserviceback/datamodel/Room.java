@@ -19,6 +19,10 @@ public class Room {
         return roomId;
     }
 
+    public String adminId() {
+        return adminId;
+    }
+
     public void addMember(RoomMember member) {
         memberList.put(member.memberId(), member);
     }

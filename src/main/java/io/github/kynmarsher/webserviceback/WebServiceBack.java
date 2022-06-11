@@ -1,5 +1,6 @@
 package io.github.kynmarsher.webserviceback;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import io.github.kynmarsher.webserviceback.datamodel.Room;
@@ -57,6 +58,7 @@ public class WebServiceBack {
 
     public WebServiceBack(String[] allowedCorsOrigins) {
         INSTANCE = this;
+
         STRICT_MAPPER = new ObjectMapper();
         RESPONSE_MAPPER = new ObjectMapper();
         RESPONSE_MAPPER.enable(SerializationFeature.INDENT_OUTPUT);
@@ -113,12 +115,35 @@ public class WebServiceBack {
 
     public void initializeListeners() {
         final var mainNamespace = mSocketIoServer.namespace("/");
+        final var adminNamespace = mSocketIoServer.namespace("admin");
+        adminNamespace.on("connection", arguments -> {
+            SocketIoSocket socket = (SocketIoSocket) arguments[0];
+
+            socket.on("kickUser", msgArgs -> {
+                try {
+                    final var kickUserPacket = WebServiceBack.STRICT_MAPPER.readValue(msgArgs[0].toString(), KickUserPacket.class);
+                    var responseObj = new GenericAnswerPacket(false, socket.getId(), "No such user");
+
+                    if (socket.getId().equals(roomList.get(kickUserPacket.roomId()).adminId())) {
+                        responseObj = new GenericAnswerPacket(true, socket.getId(), "User is kicked");
+                        socket.send("kickUser", msgArgs[0]);
+                    }
+                    if (msgArgs[msgArgs.length - 1] instanceof SocketIoSocket.ReceivedByLocalAcknowledgementCallback callback) {
+                        callback.sendAcknowledgement(dataToJson(responseObj));
+                    }
+                } catch (JsonProcessingException e) {
+                    throw new RuntimeException(e);
+                }
+
+            });
+        });
         mainNamespace.on("connection", arguments -> {
             SocketIoSocket socket = (SocketIoSocket) arguments[0];
             log.info("[Client %s] connected".formatted(socket.getId()));
 
             socket.on("message", msgArgs -> {
                 System.out.println("[Client " + socket.getId() + "] " + msgArgs);
+                // [Client sjdjjsdjsjd]
                 socket.send("message", "test message", 1);
             });
 
@@ -128,10 +153,10 @@ public class WebServiceBack {
                     log.info("[Client %s] requested room creation".formatted(socket.getId()));
                     Room newRoom = new Room(socket.getId());
                     // Сохраняем новую СВОЙ ОБЪЕКТ комнаты в список комнат
+                    // <id комнаты> -> Room
                     WebServiceBack.INSTANCE.roomList().put(newRoom.roomId(), newRoom);
 
-                    final var responseObj = new CreateRoomResponsePacket(newRoom.roomId(), socket.getId(), createRoomRequest.name());
-                    // socket.send("createRoom", dataToJson(responseObj));
+                    final var responseObj = new CreateRoomResponsePacket(newRoom.roomId(), socket.getId());
 
                     if (msgArgs[msgArgs.length - 1] instanceof SocketIoSocket.ReceivedByLocalAcknowledgementCallback callback) {
                         callback.sendAcknowledgement(dataToJson(responseObj));
@@ -146,11 +171,14 @@ public class WebServiceBack {
                 try {
                     final var joinRoomRequest = WebServiceBack.STRICT_MAPPER.readValue(msgArgs[0].toString(), JoinRoomRequestPacket.class);
                     log.info("[Client %s] requested to join the room %s".formatted(socket.getId(), joinRoomRequest.roomId()));
-                    var responseObj = new GenericAnswerPacket(false, socket.getId(), "Room doesn't exist yet or expired");
+                    var responseObj = new JoinRoomAckPacket(false, socket.getId(), false, "Room doesn't exist yet or expired");
 
 
                     if (roomList.containsKey(joinRoomRequest.roomId())) {
-                        responseObj = new GenericAnswerPacket(true, socket.getId(), "success");
+                        responseObj = new JoinRoomAckPacket(false,
+                                socket.getId(),
+                                socket.getId().equals(roomList.get(joinRoomRequest.roomId()).adminId()),
+                                "Room doesn't exist yet or expired");
                         // Присоединяем в своих комнатах
                         roomList.get(joinRoomRequest.roomId()).addMember(new RoomMember(joinRoomRequest.name(),
                                 socket.getId(),
@@ -163,21 +191,11 @@ public class WebServiceBack {
                     } else {
                         log.info("[Client %s] tried non existent room %s".formatted(socket.getId(), joinRoomRequest.roomId()));
                     }
+
                     if (msgArgs[msgArgs.length - 1] instanceof SocketIoSocket.ReceivedByLocalAcknowledgementCallback callback) {
                         callback.sendAcknowledgement(dataToJson(responseObj));
                         log.info("[Client %s] joined the room %s".formatted(socket.getId(), joinRoomRequest.roomId()));
                     }
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            });
-
-            socket.on("roomInfo", msgArgs -> {
-                try {
-                    final var roomInfoRequest = WebServiceBack.STRICT_MAPPER.readValue(msgArgs[0].toString(), RoomInfoRequestPacket.class);
-                    log.info("[Client %s] requested to data about room %s".formatted(socket.getId(), roomInfoRequest.roomId()));
-                    final var responseObj = new RoomInfoResponsePacket(roomList.containsKey(roomInfoRequest.roomId()));
-                    socket.send("roomInfo", dataToJson(responseObj));
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
@@ -189,11 +207,13 @@ public class WebServiceBack {
                     final var offerPacket = WebServiceBack.STRICT_MAPPER.readValue(msgArgs[0].toString(), CreateOfferPacket.class);
                     // Send Create offer to specific user
                     log.info("[Clinet %s] [Room %s] sent offer to client %s".formatted(offerPacket.offerFrom(), offerPacket.roomId(), offerPacket.offerTo()));
+
                     var clientOpt = Arrays.stream(mainNamespace.getAdapter().listClients(offerPacket.roomId()))
                             .filter(client -> client.getId().equals(offerPacket.offerTo()))
                             .reduce((a, b) -> null);
-                    clientOpt.ifPresentOrElse(client -> client.send("createOffer", msgArgs[0]), () ->
-                            log.info("[Clinet %s] don't know %s".formatted(socket.getId(), offerPacket.offerTo())));
+
+                    clientOpt.ifPresentOrElse(client -> client.send("createOffer", msgArgs[0]),
+                            () -> log.info("[Client %s] don't know %s".formatted(socket.getId(), offerPacket.offerTo())));
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
@@ -228,19 +248,17 @@ public class WebServiceBack {
             socket.on("chatMessage", msgArgs -> {
                 try {
                     final var chatMsg = WebServiceBack.STRICT_MAPPER.readValue(msgArgs[0].toString(), IncomingChatMessagePacket.class);
+                    var responseObj = new GenericAnswerPacket(true, chatMsg.userId(), "Success");
+
                     if ( chatMsg.message() != null && chatMsg.message().length() <= 128 ) {
                         socket.broadcast(chatMsg.roomId(), "chatMessage", msgArgs[0]);
-                        if (msgArgs[msgArgs.length - 1] instanceof SocketIoSocket.ReceivedByLocalAcknowledgementCallback callback) {
-                            final var responseObj = new GenericAnswerPacket(true, chatMsg.userId(), "Success");
-                            callback.sendAcknowledgement(dataToJson(responseObj));
-                            log.info("[Client %s] Room %s msg:  %s".formatted(socket.getId(), chatMsg.roomId(), chatMsg.message()));
-                        }
                     } else {
-                        if (msgArgs[msgArgs.length - 1] instanceof SocketIoSocket.ReceivedByLocalAcknowledgementCallback callback) {
-                            final var responseObj = new GenericAnswerPacket(false, chatMsg.userId(), "Message is too big");
-                            callback.sendAcknowledgement(dataToJson(responseObj));
-                            log.info("[Client %s] Sent message too big".formatted(socket.getId()));
-                        }
+                        responseObj = new GenericAnswerPacket(false, chatMsg.userId(), "Message is too big");
+                    }
+
+                    if (msgArgs[msgArgs.length - 1] instanceof SocketIoSocket.ReceivedByLocalAcknowledgementCallback callback) {
+                        callback.sendAcknowledgement(dataToJson(responseObj));
+                        log.info("[Client %s] Room %s msg:  %s".formatted(socket.getId(), chatMsg.roomId(), chatMsg.message()));
                     }
                 } catch (Exception e) {
                     e.printStackTrace();

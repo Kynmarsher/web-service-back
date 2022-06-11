@@ -2,6 +2,8 @@ package io.github.kynmarsher.webserviceback.util;
 
 import com.aventrix.jnanoid.jnanoid.NanoIdUtils;
 import io.github.kynmarsher.webserviceback.WebServiceBack;
+import io.github.kynmarsher.webserviceback.socketio.room.JoinRoomRequestPacket;
+import io.github.kynmarsher.webserviceback.socketio.room.JoinRoomBroadcastPacket;
 import lombok.SneakyThrows;
 import lombok.experimental.UtilityClass;
 
@@ -20,6 +22,10 @@ public class Utils {
 
     public static String nanoId() {
         return NanoIdUtils.randomNanoId(NanoIdUtils.DEFAULT_NUMBER_GENERATOR, ID_ALPHABET, 6);
+    }
+
+    public static JoinRoomBroadcastPacket joinRoomBroadcast(JoinRoomRequestPacket requestPacket, boolean isAdmin) {
+        return new JoinRoomBroadcastPacket(requestPacket.roomId(), requestPacket.userId(), requestPacket.name(), isAdmin, requestPacket.useVideo(), requestPacket.useAudio());
     }
 
 }
