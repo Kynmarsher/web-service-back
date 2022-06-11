@@ -1,4 +1,4 @@
-package io.github.ryrys202.videovstrechi.socketio.webrtc;
+package io.github.ryrys202.videovstrechi.network.webrtc;
 
 import com.fasterxml.jackson.databind.JsonNode;
 
