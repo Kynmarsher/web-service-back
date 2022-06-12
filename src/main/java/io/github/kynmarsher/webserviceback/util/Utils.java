@@ -36,6 +36,7 @@ public class Utils {
     }
 
     public static Optional<SocketIoSocket> userBySocketId(SocketIoNamespace namespace, String roomId, RoomMember member) {
+
         return Arrays.stream(namespace.getAdapter().listClients(roomId))
                 .filter(client -> client.getId().equals(member.socketId()))
                 .reduce((a, b) -> null);

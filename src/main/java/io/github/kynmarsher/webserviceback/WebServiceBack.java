@@ -126,6 +126,10 @@ public class WebServiceBack {
 
                     if (roomList.get(kickUserPacket.roomId()).checkAdminPerms(kickUserPacket.adminSecret())) {
                         kickUserAck = new GenericAnswerPacket(true, "User is kicked");
+                        Utils.userBySocketId(mainNamespace, kickUserPacket.roomId(), roomList.get(kickUserPacket.roomId()).getMember(kickUserPacket.userToKick()))
+                                .ifPresentOrElse(
+                                        foundSocket -> foundSocket.send("kickUser", dataToJson(new NotifyKickPacket(kickUserPacket.userToKick()))),
+                                        () -> userNotFoundWarn(socket, kickUserPacket.userToKick(), "kickUser"));
                         socket.send("kickUser", dataToJson(new NotifyKickPacket(kickUserPacket.userToKick())));
                     }
                     if (msgArgs[msgArgs.length - 1] instanceof SocketIoSocket.ReceivedByLocalAcknowledgementCallback callback) {
@@ -229,7 +233,7 @@ public class WebServiceBack {
                     Utils.userBySocketId(mainNamespace, offerPacket.roomId(), roomList.get(offerPacket.roomId()).getMember(offerPacket.offerToId()))
                             .ifPresentOrElse(
                                     foundSocket -> foundSocket.send("createOffer", msgArgs[0]),
-                                    () -> log.warn("[Socket %s] No socket for requested user %s on create Offer".formatted(socket.getId(), offerPacket.offerToId())));
+                                    () -> userNotFoundWarn(socket, offerPacket.offerToId(), "createOffer"));
 
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -247,7 +251,7 @@ public class WebServiceBack {
                     Utils.userBySocketId(mainNamespace, answerPacket.roomId(), roomList.get(answerPacket.roomId()).getMember(answerPacket.answerToId()))
                             .ifPresentOrElse(
                                     foundSocket -> foundSocket.send("answerOffer", msgArgs[0]),
-                                    () -> log.warn("[Socket %s] No socket for requested user %s on answerOffer".formatted(socket.getId(), answerPacket.answerToId())));
+                                    () -> userNotFoundWarn(socket, answerPacket.answerToId(), "answerOffer"));
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
@@ -283,5 +287,9 @@ public class WebServiceBack {
                 }
             });
         });
+    }
+
+    private static void userNotFoundWarn(SocketIoSocket socket, String userId, String eventDescription) {
+        log.warn("[Socket %s] No socket for requested user %s on %s".formatted(socket.getId(), userId, eventDescription));
     }
 }
