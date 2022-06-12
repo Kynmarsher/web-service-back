@@ -190,8 +190,6 @@ public class WebServiceBack {
                         ackPacket = new JoinRoomAckPacket(true,
                                 member.userId(),
                                 currentRoom.isAdmin(member.userId()));
-                        // Присоединяем его сокет к комнате как и самого пользователя
-                        socket.joinRoom(joinRoomRequest.roomId());
                     } else {
                         log.info("[Socket %s] tried non existent room %s".formatted(socket.getId(), joinRoomRequest.roomId()));
                     }
@@ -209,6 +207,8 @@ public class WebServiceBack {
                 try {
                     final var startCall = WebServiceBack.STRICT_MAPPER.readValue(msgArgs[0].toString(), StartCallPacket.class);
                     log.info("[Socket %s] Starting calling recipients in room: %s".formatted(socket.getId(), startCall.roomId()));
+                    // Присоединяем его сокет к комнате как и самого пользователя
+                    socket.joinRoom(startCall.roomId());
                     socket.broadcast(startCall.roomId(), "startCall", msgArgs);
                 } catch (JsonProcessingException e) {
                     throw new RuntimeException(e);
