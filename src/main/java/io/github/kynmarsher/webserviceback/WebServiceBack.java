@@ -208,6 +208,7 @@ public class WebServiceBack {
             socket.on("startCall", msgArgs -> {
                 try {
                     final var startCall = WebServiceBack.STRICT_MAPPER.readValue(msgArgs[0].toString(), StartCallPacket.class);
+                    log.info("Starting calling recipients in room".formatted(startCall.roomId()));
                     socket.broadcast(startCall.roomId(), "startCall", msgArgs);
                 } catch (JsonProcessingException e) {
                     throw new RuntimeException(e);
