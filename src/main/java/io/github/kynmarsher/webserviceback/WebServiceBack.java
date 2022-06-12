@@ -151,7 +151,7 @@ public class WebServiceBack {
 
                     if (msgArgs[msgArgs.length - 1] instanceof SocketIoSocket.ReceivedByLocalAcknowledgementCallback callback) {
                         callback.sendAcknowledgement(dataToJson(responseObj));
-                        log.info("[Socket %s] received the room %s".formatted(socket.getId(), responseObj.roomId()));
+                        log.info("[Socket %s] Created room: %s".formatted(socket.getId(), responseObj.roomId()));
                     }
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -161,7 +161,7 @@ public class WebServiceBack {
             socket.on("joinRoom", msgArgs -> {
                 try {
                     final var joinRoomRequest = WebServiceBack.STRICT_MAPPER.readValue(msgArgs[0].toString(), JoinRoomRequestPacket.class);
-                    log.info("[Client %s] requested to join the room %s".formatted(socket.getId(), joinRoomRequest.roomId()));
+                    log.info("[Socket %s] requested to join the room %s".formatted(socket.getId(), joinRoomRequest.roomId()));
                     // ACK ответ на случай если комнаты не существует
                     var ackPacket = new JoinRoomAckPacket(false, "none", false);
 
@@ -172,7 +172,7 @@ public class WebServiceBack {
                        final var currentRoom = roomList.get(joinRoomRequest.roomId());
                         if (currentRoom.isMember(joinRoomRequest.userId())) {
                             // Пользователь уже в комнате
-                            log.info("User that already exists joins the room: %s".formatted(joinRoomRequest.userId()));
+                            log.info("[Socket %s] User that already exists joins the room. ID: %s".formatted(socket.getId(), joinRoomRequest.userId()));
                             member = roomList.get(joinRoomRequest.roomId()).getMember(joinRoomRequest.userId());
                         } else {
                             member = new RoomMember(joinRoomRequest.name(),
@@ -184,7 +184,7 @@ public class WebServiceBack {
                                 currentRoom.claimAdmin(member.userId());
                             }
                             currentRoom.addMember(member);
-                            log.info("Creating new user: %s".formatted(member.userId()));
+                            log.info("[Socket %s] Created new user. ID: %s".formatted(socket.getId(), member.userId()));
                         }
                         // ACK ответ на существование комнаты
                         ackPacket = new JoinRoomAckPacket(true,
@@ -193,12 +193,12 @@ public class WebServiceBack {
                         // Присоединяем его сокет к комнате как и самого пользователя
                         socket.joinRoom(joinRoomRequest.roomId());
                     } else {
-                        log.info("[Client %s] tried non existent room %s".formatted(socket.getId(), joinRoomRequest.roomId()));
+                        log.info("[Socket %s] tried non existent room %s".formatted(socket.getId(), joinRoomRequest.roomId()));
                     }
 
                     if (msgArgs[msgArgs.length - 1] instanceof SocketIoSocket.ReceivedByLocalAcknowledgementCallback callback) {
                         callback.sendAcknowledgement(dataToJson(ackPacket));
-                        log.info("[Client %s] joined the room %s".formatted(socket.getId(), joinRoomRequest.roomId()));
+                        log.info("[Socket %s] joined the room %s".formatted(socket.getId(), joinRoomRequest.roomId()));
                     }
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -208,7 +208,7 @@ public class WebServiceBack {
             socket.on("startCall", msgArgs -> {
                 try {
                     final var startCall = WebServiceBack.STRICT_MAPPER.readValue(msgArgs[0].toString(), StartCallPacket.class);
-                    log.info("Starting calling recipients in room".formatted(startCall.roomId()));
+                    log.info("[Socket %s] Starting calling recipients in room: %s".formatted(socket.getId(), startCall.roomId()));
                     socket.broadcast(startCall.roomId(), "startCall", msgArgs);
                 } catch (JsonProcessingException e) {
                     throw new RuntimeException(e);
@@ -227,7 +227,7 @@ public class WebServiceBack {
                     // Отправим ему сообщение
                     Utils.userBySocketId(mainNamespace, offerPacket.roomId(), socketId).ifPresentOrElse(
                             foundSocket -> foundSocket.send("createOffer", msgArgs[0]),
-                            () -> log.warn("No socket for requested user %s".formatted(socketId)));
+                            () -> log.warn("[Socket %s] No socket for requested user %s on create Offer".formatted(socket.getId(), socketId)));
 
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -243,7 +243,7 @@ public class WebServiceBack {
                     final var socketId = roomList.get(answerPacket.roomId()).getMember(answerPacket.answerToId()).socketId();
                     Utils.userBySocketId(mainNamespace, answerPacket.roomId(), socketId).ifPresentOrElse(
                             foundSocket -> foundSocket.send("createOffer", msgArgs[0]),
-                            () -> log.warn("No socket for requested user %s".formatted(socketId)));
+                            () -> log.warn("[Socket %s] No socket for requested user  %s on answerOffer".formatted(socket.getId(), socketId)));
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
@@ -254,7 +254,6 @@ public class WebServiceBack {
                 try {
                     final var iceCandidatePacket = WebServiceBack.STRICT_MAPPER.readValue(msgArgs[0].toString(), IceCandidatePacket.class);
                     socket.broadcast(iceCandidatePacket.roomId(), "iceCandidate", msgArgs[0]);
-
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
