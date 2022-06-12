@@ -2,6 +2,7 @@ package io.github.kynmarsher.webserviceback.util;
 
 import com.aventrix.jnanoid.jnanoid.NanoIdUtils;
 import io.github.kynmarsher.webserviceback.WebServiceBack;
+import io.github.kynmarsher.webserviceback.datamodel.RoomMember;
 import io.socket.socketio.server.SocketIoNamespace;
 import io.socket.socketio.server.SocketIoSocket;
 import lombok.SneakyThrows;
@@ -34,9 +35,9 @@ public class Utils {
         return NanoIdUtils.randomNanoId(NanoIdUtils.DEFAULT_NUMBER_GENERATOR, ID_ALPHABET, 32);
     }
 
-    public static Optional<SocketIoSocket> userBySocketId(SocketIoNamespace namespace, String roomId, String socketId) {
+    public static Optional<SocketIoSocket> userBySocketId(SocketIoNamespace namespace, String roomId, RoomMember member) {
         return Arrays.stream(namespace.getAdapter().listClients(roomId))
-                .filter(client -> client.getId().equals(socketId))
+                .filter(client -> client.getId().equals(member.socketId()))
                 .reduce((a, b) -> null);
     }
 

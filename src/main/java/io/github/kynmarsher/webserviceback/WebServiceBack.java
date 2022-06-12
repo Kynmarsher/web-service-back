@@ -219,16 +219,14 @@ public class WebServiceBack {
             socket.on("createOffer", msgArgs -> {
                 try {
                     final var offerPacket = WebServiceBack.STRICT_MAPPER.readValue(msgArgs[0].toString(), CreateOfferPacket.class);
-                    // Отправляем пакет конкретному пользователю
+
                     log.info("[Socket %s] [Room %s] %s sent offer to client %s".formatted(socket.getId(), offerPacket.roomId(), offerPacket.offerFromId(), offerPacket.offerToId()));
 
-                    // Найдем айди его сокета по user id, TODO: свернуть в одну функцию?
-                    final var socketId = roomList.get(offerPacket.roomId()).getMember(offerPacket.offerToId()).socketId();
-                    System.out.println("Socket Offer" + socketId);
-                    // Отправим ему сообщение
-                    Utils.userBySocketId(mainNamespace, offerPacket.roomId(), socketId).ifPresentOrElse(
-                            foundSocket -> foundSocket.send("createOffer", msgArgs[0]),
-                            () -> log.warn("[Socket %s] No socket for requested user %s on create Offer".formatted(socket.getId(), socketId)));
+                    // Найдем айди его сокета по неймспейсу, answerPacket, RoomMember объекту
+                    Utils.userBySocketId(mainNamespace, offerPacket.roomId(), roomList.get(offerPacket.roomId()).getMember(offerPacket.offerToId()))
+                            .ifPresentOrElse(
+                                    foundSocket -> foundSocket.send("createOffer", msgArgs[0]),
+                                    () -> log.warn("[Socket %s] No socket for requested user %s on create Offer".formatted(socket.getId(), offerPacket.offerToId())));
 
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -239,12 +237,14 @@ public class WebServiceBack {
             socket.on("answerOffer", msgArgs -> {
                 try {
                     final var answerPacket = WebServiceBack.STRICT_MAPPER.readValue(msgArgs[0].toString(), AnswerOfferPacket.class);
+
                     log.info("[Socket %s] [Room %s] User %s sent answer to %s".formatted(socket.getId(), answerPacket.roomId(), answerPacket.answerFromId(), answerPacket.answerToId()));
-                    // Найдем айди его сокета по user id, TODO: свернуть в одну функцию?
-                    final var socketId = roomList.get(answerPacket.roomId()).getMember(answerPacket.answerToId()).socketId();
-                    Utils.userBySocketId(mainNamespace, answerPacket.roomId(), socketId).ifPresentOrElse(
-                            foundSocket -> foundSocket.send("answerOffer", msgArgs[0]),
-                            () -> log.warn("[Socket %s] No socket for requested user  %s on answerOffer".formatted(socket.getId(), socketId)));
+
+                    // Найдем айди его сокета по неймспейсу, answerPacket, RoomMember объекту
+                    Utils.userBySocketId(mainNamespace, answerPacket.roomId(), roomList.get(answerPacket.roomId()).getMember(answerPacket.answerToId()))
+                            .ifPresentOrElse(
+                                    foundSocket -> foundSocket.send("answerOffer", msgArgs[0]),
+                                    () -> log.warn("[Socket %s] No socket for requested user %s on answerOffer".formatted(socket.getId(), answerPacket.answerToId())));
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
