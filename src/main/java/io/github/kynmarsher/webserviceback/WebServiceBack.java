@@ -63,6 +63,7 @@ public class WebServiceBack {
         RESPONSE_MAPPER.enable(SerializationFeature.INDENT_OUTPUT);
 
         roomList = new HashMap<>();
+        sessionList = new HashMap<>();
         // Jetty and Socket.io init
         this.mServer = new Server(new InetSocketAddress(3200));
         eioOptions = EngineIoServerOptions.newFromDefault();
@@ -148,7 +149,7 @@ public class WebServiceBack {
 
                     roomList.put(newRoom.roomId(), newRoom);
 
-                    final var responseObj = new CreateRoomResponsePacket(newRoom.roomId());
+                    final var responseObj = new CreateRoomAckPacket(newRoom.roomId());
 
                     if (msgArgs[msgArgs.length - 1] instanceof SocketIoSocket.ReceivedByLocalAcknowledgementCallback callback) {
                         callback.sendAcknowledgement(dataToJson(responseObj));
