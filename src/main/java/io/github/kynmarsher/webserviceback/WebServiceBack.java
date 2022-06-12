@@ -122,10 +122,10 @@ public class WebServiceBack {
             socket.on("kickUser", msgArgs -> {
                 try {
                     final var kickUserPacket = WebServiceBack.STRICT_MAPPER.readValue(msgArgs[0].toString(), KickUserPacket.class);
-                    var kickUserAck = new GenericAnswerPacket(false, socket.getId(), "No such user");
+                    var kickUserAck = new GenericAnswerPacket(false, "No such user");
 
                     if (roomList.get(kickUserPacket.roomId()).checkAdminPerms(kickUserPacket.adminSecret())) {
-                        kickUserAck = new GenericAnswerPacket(true, socket.getId(), "User is kicked");
+                        kickUserAck = new GenericAnswerPacket(true, "User is kicked");
                         socket.send("kickUser", dataToJson(new NotifyKickPacket(kickUserPacket.userToKick())));
                     }
                     if (msgArgs[msgArgs.length - 1] instanceof SocketIoSocket.ReceivedByLocalAcknowledgementCallback callback) {
@@ -144,11 +144,11 @@ public class WebServiceBack {
 
                     roomList.put(newRoom.roomId(), newRoom);
 
-                    final var responseObj = new CreateRoomAckPacket(newRoom.roomId());
+                    final var createRoomAck = new CreateRoomAckPacket(newRoom.roomId());
 
                     if (msgArgs[msgArgs.length - 1] instanceof SocketIoSocket.ReceivedByLocalAcknowledgementCallback callback) {
-                        callback.sendAcknowledgement(dataToJson(responseObj));
-                        log.info("[Socket %s] Created room: %s".formatted(socket.getId(), responseObj.roomId()));
+                        callback.sendAcknowledgement(dataToJson(createRoomAck));
+                        log.info("[Socket %s] Created room: %s".formatted(socket.getId(), createRoomAck.roomId()));
                     }
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -160,7 +160,7 @@ public class WebServiceBack {
                     final var joinRoomRequest = WebServiceBack.STRICT_MAPPER.readValue(msgArgs[0].toString(), JoinRoomRequestPacket.class);
                     log.info("[Socket %s] requested to join the room %s".formatted(socket.getId(), joinRoomRequest.roomId()));
                     // ACK ответ на случай если комнаты не существует (Пользователь не администратор)
-                    var ackPacket = new JoinRoomAckPacket(false, "none", false, "");
+                    var joinRoomAck = new JoinRoomAckPacket(false, "none", false, "");
 
                     // Комната существует
                     if (roomList.containsKey(joinRoomRequest.roomId())) {
@@ -177,7 +177,7 @@ public class WebServiceBack {
                                     joinRoomRequest.useVideo(),
                                     joinRoomRequest.useAudio());
                             // Комната существует но пользователь не администратор
-                            ackPacket = new JoinRoomAckPacket(true,
+                            joinRoomAck = new JoinRoomAckPacket(true,
                                     member.userId(),
                                     false,
                                     "");
@@ -185,7 +185,7 @@ public class WebServiceBack {
                             // Стать администратором
                             if (currentRoom.isAdminClaimable()) {
                                 final var secret = currentRoom.claimAdmin(member.userId());
-                                ackPacket = new JoinRoomAckPacket(true,
+                                joinRoomAck = new JoinRoomAckPacket(true,
                                         member.userId(),
                                         true,
                                         secret);
@@ -198,7 +198,7 @@ public class WebServiceBack {
                     }
 
                     if (msgArgs[msgArgs.length - 1] instanceof SocketIoSocket.ReceivedByLocalAcknowledgementCallback callback) {
-                        callback.sendAcknowledgement(dataToJson(ackPacket));
+                        callback.sendAcknowledgement(dataToJson(joinRoomAck));
                         log.info("[Socket %s] joined the room %s".formatted(socket.getId(), joinRoomRequest.roomId()));
                     }
                 } catch (Exception e) {
@@ -266,12 +266,12 @@ public class WebServiceBack {
             socket.on("chatMessage", msgArgs -> {
                 try {
                     final var chatMsg = WebServiceBack.STRICT_MAPPER.readValue(msgArgs[0].toString(), IncomingChatMessagePacket.class);
-                    var responseObj = new GenericAnswerPacket(true, chatMsg.fromId(), "Success");
+                    var responseObj = new GenericAnswerPacket(true, "Success");
 
                     if ( chatMsg.message() != null && chatMsg.message().length() <= 128 ) {
                         socket.broadcast(chatMsg.roomId(), "chatMessage", msgArgs[0]);
                     } else {
-                        responseObj = new GenericAnswerPacket(false, chatMsg.fromId(), "Message is too big");
+                        responseObj = new GenericAnswerPacket(false, "Message is too big");
                     }
 
                     if (msgArgs[msgArgs.length - 1] instanceof SocketIoSocket.ReceivedByLocalAcknowledgementCallback callback) {
