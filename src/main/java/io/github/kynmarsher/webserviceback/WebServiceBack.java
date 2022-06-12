@@ -168,23 +168,32 @@ public class WebServiceBack {
                     // Комната существует
                     if (roomList.containsKey(joinRoomRequest.roomId())) {
                         // Создаем нового пользователя
-                        final var newMember = new RoomMember(joinRoomRequest.name(),
-                                socket.getId(),
-                                joinRoomRequest.useVideo(),
-                                joinRoomRequest.useAudio());
-
+                       RoomMember member;
+                       final var currentRoom = roomList.get(joinRoomRequest.roomId());
+                        if (currentRoom.isMember(joinRoomRequest.userId())) {
+                            // Пользователь уже в комнате
+                            log.info("User that already exists joins the room: %s".formatted(joinRoomRequest.userId()));
+                            member = roomList.get(joinRoomRequest.roomId()).getMember(joinRoomRequest.userId());
+                        } else {
+                            member = new RoomMember(joinRoomRequest.name(),
+                                    socket.getId(),
+                                    joinRoomRequest.useVideo(),
+                                    joinRoomRequest.useAudio());
+                            // Стать администратором
+                            if (currentRoom.isAdminClaimable()) {
+                                currentRoom.claimAdmin(member.userId());
+                            }
+                            currentRoom.addMember(member);
+                            log.info("Creating new user: %s".formatted(member.userId()));
+                        }
                         // ACK ответ на существование комнаты
                         ackPacket = new JoinRoomAckPacket(true,
-                                newMember.userId(),
+                                member.userId(),
                                 roomList.get(joinRoomRequest.roomId()).isAdminClaimable());
                         // Присоединяем его сокет к комнате как и самого пользователя
-                        roomList.get(joinRoomRequest.roomId()).addMember(newMember);
                         socket.joinRoom(joinRoomRequest.roomId());
                         // Отправляем данные всем в комнате кроме самого клиента
-                        // Создаем пакет для трансляции
-                        final var broadcastPacket = new JoinRoomBroadcastPacket(joinRoomRequest.roomId(), newMember.userId(), newMember.name(), newMember.video(), newMember.audio());
-                        // Отправляем
-                        socket.broadcast(joinRoomRequest.roomId(), "joinRoom", dataToJson(broadcastPacket));
+                        socket.broadcast(joinRoomRequest.roomId(), "joinRoom", msgArgs[0]);
                     } else {
                         log.info("[Client %s] tried non existent room %s".formatted(socket.getId(), joinRoomRequest.roomId()));
                     }

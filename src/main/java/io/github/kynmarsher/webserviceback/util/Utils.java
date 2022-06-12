@@ -2,8 +2,6 @@ package io.github.kynmarsher.webserviceback.util;
 
 import com.aventrix.jnanoid.jnanoid.NanoIdUtils;
 import io.github.kynmarsher.webserviceback.WebServiceBack;
-import io.github.kynmarsher.webserviceback.socketio.room.JoinRoomRequestPacket;
-import io.github.kynmarsher.webserviceback.socketio.room.JoinRoomBroadcastPacket;
 import io.socket.socketio.server.SocketIoNamespace;
 import io.socket.socketio.server.SocketIoSocket;
 import lombok.SneakyThrows;

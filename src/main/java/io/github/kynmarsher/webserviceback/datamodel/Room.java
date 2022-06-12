@@ -30,6 +30,10 @@ public class Room {
         return memberList.get(memberId);
     }
 
+    public boolean isMember(String memberId) {
+        return memberList.containsKey(memberId);
+    }
+
     public boolean isAdminClaimable() {
         return adminId == null && memberList.isEmpty();
     }
