@@ -189,7 +189,7 @@ public class WebServiceBack {
                         // ACK ответ на существование комнаты
                         ackPacket = new JoinRoomAckPacket(true,
                                 member.userId(),
-                                roomList.get(joinRoomRequest.roomId()).isAdminClaimable());
+                                currentRoom.isAdminClaimable());
                         // Присоединяем его сокет к комнате как и самого пользователя
                         socket.joinRoom(joinRoomRequest.roomId());
                         // Отправляем данные всем в комнате кроме самого клиента

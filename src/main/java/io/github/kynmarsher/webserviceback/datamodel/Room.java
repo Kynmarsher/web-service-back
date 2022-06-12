@@ -35,6 +35,8 @@ public class Room {
     }
 
     public boolean isAdminClaimable() {
+        System.out.println(adminId);
+        System.out.println(memberList);
         return adminId == null;
     }
 
