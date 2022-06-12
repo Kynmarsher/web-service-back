@@ -130,7 +130,6 @@ public class WebServiceBack {
                                 .ifPresentOrElse(
                                         foundSocket -> foundSocket.send("kickUser", dataToJson(new NotifyKickPacket(kickUserPacket.userToKick()))),
                                         () -> userNotFoundWarn(socket, kickUserPacket.userToKick(), "kickUser"));
-                        socket.send("kickUser", dataToJson(new NotifyKickPacket(kickUserPacket.userToKick())));
                     }
                     if (msgArgs[msgArgs.length - 1] instanceof SocketIoSocket.ReceivedByLocalAcknowledgementCallback callback) {
                         callback.sendAcknowledgement(dataToJson(kickUserAck));
