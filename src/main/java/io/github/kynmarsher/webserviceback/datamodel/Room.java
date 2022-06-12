@@ -34,9 +34,11 @@ public class Room {
         return memberList.containsKey(memberId);
     }
 
+    public boolean isAdmin(String userId) {
+        return adminId.equals(userId);
+    }
+
     public boolean isAdminClaimable() {
-        System.out.println(adminId);
-        System.out.println(memberList);
         return adminId == null;
     }
 
