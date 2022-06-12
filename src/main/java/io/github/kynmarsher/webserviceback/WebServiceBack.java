@@ -45,7 +45,6 @@ public class WebServiceBack {
     public static ObjectMapper STRICT_MAPPER;
     @Getter
     public Map<String, Room> roomList;
-    public Map<String, RoomMember> sessionList;
 
     private final EngineIoServer mEngineIoServer;
     private final EngineIoServerOptions eioOptions;
@@ -63,7 +62,6 @@ public class WebServiceBack {
         RESPONSE_MAPPER.enable(SerializationFeature.INDENT_OUTPUT);
 
         roomList = new HashMap<>();
-        sessionList = new HashMap<>();
         // Jetty and Socket.io init
         this.mServer = new Server(new InetSocketAddress(3200));
         eioOptions = EngineIoServerOptions.newFromDefault();
@@ -169,19 +167,16 @@ public class WebServiceBack {
 
                     // Комната существует
                     if (roomList.containsKey(joinRoomRequest.roomId())) {
-                        // ACK ответ на существование комнаты
-                        ackPacket = new JoinRoomAckPacket(true,
-                                Utils.sessionId(),
-                                roomList.get(joinRoomRequest.roomId()).isAdminClaimable());
-
                         // Создаем нового пользователя
                         final var newMember = new RoomMember(joinRoomRequest.name(),
                                 socket.getId(),
                                 joinRoomRequest.useVideo(),
                                 joinRoomRequest.useAudio());
 
-                        // Добавляем пользователя в сессию
-                        sessionList.put(ackPacket.sessionId(), newMember);
+                        // ACK ответ на существование комнаты
+                        ackPacket = new JoinRoomAckPacket(true,
+                                newMember.userId(),
+                                roomList.get(joinRoomRequest.roomId()).isAdminClaimable());
                         // Присоединяем его сокет к комнате как и самого пользователя
                         roomList.get(joinRoomRequest.roomId()).addMember(newMember);
                         socket.joinRoom(joinRoomRequest.roomId());
@@ -207,19 +202,15 @@ public class WebServiceBack {
             socket.on("createOffer", msgArgs -> {
                 try {
                     final var offerPacket = WebServiceBack.STRICT_MAPPER.readValue(msgArgs[0].toString(), CreateOfferPacket.class);
-                    final var userOfferFrom = Optional.of(sessionList.get(offerPacket.sessionId()));
-                    userOfferFrom.ifPresent(user -> {
-                        // Отправляем пакет конкретному пользователю
-                        log.info("[Socket %s] [Room %s] %s sent offer to client %s".formatted(socket.getId(), offerPacket.roomId(), user.userId(), offerPacket.offerToId()));
+                    // Отправляем пакет конкретному пользователю
+                    log.info("[Socket %s] [Room %s] %s sent offer to client %s".formatted(socket.getId(), offerPacket.roomId(), offerPacket.offerFromId(), offerPacket.offerToId()));
 
-                        // Найдем айди его сокета по user id, TODO: свернуть в одну функцию?
-                        final var socketId = roomList.get(offerPacket.roomId()).getMember(offerPacket.offerToId()).socketId();
-                        // Отправим ему сообщение
-                        Utils.userBySocketId(mainNamespace, offerPacket.roomId(), socketId).ifPresentOrElse(foundSocket -> {
-                            final var offerTranslate = new CreateOfferTranslatePacket(offerPacket.roomId(), offerPacket.name(), user.userId(), offerPacket.offerBody());
-                            foundSocket.send("createOffer", dataToJson(offerTranslate));
-                        }, () -> log.warn("No socket for requested user %s".formatted(socketId)));
-                    });
+                    // Найдем айди его сокета по user id, TODO: свернуть в одну функцию?
+                    final var socketId = roomList.get(offerPacket.roomId()).getMember(offerPacket.offerToId()).socketId();
+                    // Отправим ему сообщение
+                    Utils.userBySocketId(mainNamespace, offerPacket.roomId(), socketId).ifPresentOrElse(
+                            foundSocket -> foundSocket.send("createOffer", msgArgs[0]),
+                            () -> log.warn("No socket for requested user %s".formatted(socketId)));
 
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -230,16 +221,12 @@ public class WebServiceBack {
             socket.on("answerOffer", msgArgs -> {
                 try {
                     final var answerPacket = WebServiceBack.STRICT_MAPPER.readValue(msgArgs[0].toString(), AnswerOfferPacket.class);
-                    final var userAnswerFrom = Optional.of(sessionList.get(answerPacket.sessionId()));
-                    userAnswerFrom.ifPresent(user -> {
-                        log.info("[Socket %s] [Room %s] User %s sent answer to %s".formatted(socket.getId(), answerPacket.roomId(), userAnswerFrom, answerPacket.answerToId()));
-                        // Найдем айди его сокета по user id, TODO: свернуть в одну функцию?
-                        final var socketId = roomList.get(answerPacket.roomId()).getMember(answerPacket.answerToId()).socketId();
-                        Utils.userBySocketId(mainNamespace, answerPacket.roomId(), socketId).ifPresentOrElse(foundSocket -> {
-                            final var answerTranslate = new AnswerOfferTranslatePacket(answerPacket.roomId(), user.userId(), answerPacket.answerBody());
-                            foundSocket.send("createOffer", dataToJson(answerTranslate));
-                        }, () -> log.warn("No socket for requested user %s".formatted(socketId)));
-                    });
+                    log.info("[Socket %s] [Room %s] User %s sent answer to %s".formatted(socket.getId(), answerPacket.roomId(), answerPacket.answerFromId(), answerPacket.answerToId()));
+                    // Найдем айди его сокета по user id, TODO: свернуть в одну функцию?
+                    final var socketId = roomList.get(answerPacket.roomId()).getMember(answerPacket.answerToId()).socketId();
+                    Utils.userBySocketId(mainNamespace, answerPacket.roomId(), socketId).ifPresentOrElse(
+                            foundSocket -> foundSocket.send("createOffer", msgArgs[0]),
+                            () -> log.warn("No socket for requested user %s".formatted(socketId)));
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
@@ -249,11 +236,7 @@ public class WebServiceBack {
             socket.on("iceCandidate", msgArgs -> {
                 try {
                     final var iceCandidatePacket = WebServiceBack.STRICT_MAPPER.readValue(msgArgs[0].toString(), IceCandidatePacket.class);
-                    final var userIceFrom = Optional.of(sessionList.get(iceCandidatePacket.sessionId()));
-                    userIceFrom.ifPresent(user -> {
-                        final var iceTranslatePacket = new IceCandidateTranslatePacket(iceCandidatePacket.roomId(), user.userId(), iceCandidatePacket.iceCandidate());
-                        socket.broadcast(iceCandidatePacket.roomId(), "iceCandidate", dataToJson(iceTranslatePacket));
-                    });
+                    socket.broadcast(iceCandidatePacket.roomId(), "iceCandidate", msgArgs[0]);
 
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -263,12 +246,12 @@ public class WebServiceBack {
             socket.on("chatMessage", msgArgs -> {
                 try {
                     final var chatMsg = WebServiceBack.STRICT_MAPPER.readValue(msgArgs[0].toString(), IncomingChatMessagePacket.class);
-                    var responseObj = new GenericAnswerPacket(true, chatMsg.userId(), "Success");
+                    var responseObj = new GenericAnswerPacket(true, chatMsg.fromId(), "Success");
 
                     if ( chatMsg.message() != null && chatMsg.message().length() <= 128 ) {
                         socket.broadcast(chatMsg.roomId(), "chatMessage", msgArgs[0]);
                     } else {
-                        responseObj = new GenericAnswerPacket(false, chatMsg.userId(), "Message is too big");
+                        responseObj = new GenericAnswerPacket(false, chatMsg.fromId(), "Message is too big");
                     }
 
                     if (msgArgs[msgArgs.length - 1] instanceof SocketIoSocket.ReceivedByLocalAcknowledgementCallback callback) {
