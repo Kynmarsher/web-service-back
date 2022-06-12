@@ -31,8 +31,8 @@ public class Utils {
         return NanoIdUtils.randomNanoId(NanoIdUtils.DEFAULT_NUMBER_GENERATOR, ID_ALPHABET, 8);
     }
 
-    public static String sessionId() {
-        return NanoIdUtils.randomNanoId(NanoIdUtils.DEFAULT_NUMBER_GENERATOR, ID_ALPHABET, 32);
+    public static String adminSecret() {
+        return NanoIdUtils.randomNanoId(NanoIdUtils.DEFAULT_NUMBER_GENERATOR, ID_ALPHABET, 128);
     }
 
     public static Optional<SocketIoSocket> userBySocketId(SocketIoNamespace namespace, String roomId, RoomMember member) {

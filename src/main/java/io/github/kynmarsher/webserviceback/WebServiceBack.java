@@ -5,6 +5,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import io.github.kynmarsher.webserviceback.datamodel.Room;
 import io.github.kynmarsher.webserviceback.datamodel.RoomMember;
+import io.github.kynmarsher.webserviceback.socketio.admin.KickUserPacket;
+import io.github.kynmarsher.webserviceback.socketio.admin.NotifyKickPacket;
 import io.github.kynmarsher.webserviceback.socketio.chat.IncomingChatMessagePacket;
 import io.github.kynmarsher.webserviceback.socketio.room.*;
 import io.github.kynmarsher.webserviceback.socketio.webrtc.*;
@@ -113,31 +115,26 @@ public class WebServiceBack {
 
     public void initializeListeners() {
         final var mainNamespace = mSocketIoServer.namespace("/");
-        final var adminNamespace = mSocketIoServer.namespace("admin");
-        adminNamespace.on("connection", arguments -> {
+        mainNamespace.on("connection", arguments -> {
             SocketIoSocket socket = (SocketIoSocket) arguments[0];
+            log.info("[Socket %s] connected".formatted(socket.getId()));
 
             socket.on("kickUser", msgArgs -> {
                 try {
                     final var kickUserPacket = WebServiceBack.STRICT_MAPPER.readValue(msgArgs[0].toString(), KickUserPacket.class);
-                    var responseObj = new GenericAnswerPacket(false, socket.getId(), "No such user");
+                    var kickUserAck = new GenericAnswerPacket(false, socket.getId(), "No such user");
 
-                    if (socket.getId().equals(roomList.get(kickUserPacket.roomId()).adminId())) {
-                        responseObj = new GenericAnswerPacket(true, socket.getId(), "User is kicked");
-                        socket.send("kickUser", msgArgs[0]);
+                    if (roomList.get(kickUserPacket.roomId()).checkAdminPerms(kickUserPacket.adminSecret())) {
+                        kickUserAck = new GenericAnswerPacket(true, socket.getId(), "User is kicked");
+                        socket.send("kickUser", dataToJson(new NotifyKickPacket(kickUserPacket.userToKick())));
                     }
                     if (msgArgs[msgArgs.length - 1] instanceof SocketIoSocket.ReceivedByLocalAcknowledgementCallback callback) {
-                        callback.sendAcknowledgement(dataToJson(responseObj));
+                        callback.sendAcknowledgement(dataToJson(kickUserAck));
                     }
                 } catch (JsonProcessingException e) {
                     throw new RuntimeException(e);
                 }
-
             });
-        });
-        mainNamespace.on("connection", arguments -> {
-            SocketIoSocket socket = (SocketIoSocket) arguments[0];
-            log.info("[Socket %s] connected".formatted(socket.getId()));
 
             socket.on("createRoom", msgArgs -> {
                 try {
@@ -162,8 +159,8 @@ public class WebServiceBack {
                 try {
                     final var joinRoomRequest = WebServiceBack.STRICT_MAPPER.readValue(msgArgs[0].toString(), JoinRoomRequestPacket.class);
                     log.info("[Socket %s] requested to join the room %s".formatted(socket.getId(), joinRoomRequest.roomId()));
-                    // ACK ответ на случай если комнаты не существует
-                    var ackPacket = new JoinRoomAckPacket(false, "none", false);
+                    // ACK ответ на случай если комнаты не существует (Пользователь не администратор)
+                    var ackPacket = new JoinRoomAckPacket(false, "none", false, "");
 
                     // Комната существует
                     if (roomList.containsKey(joinRoomRequest.roomId())) {
@@ -179,17 +176,23 @@ public class WebServiceBack {
                                     socket.getId(),
                                     joinRoomRequest.useVideo(),
                                     joinRoomRequest.useAudio());
+                            // Комната существует но пользователь не администратор
+                            ackPacket = new JoinRoomAckPacket(true,
+                                    member.userId(),
+                                    false,
+                                    "");
+
                             // Стать администратором
                             if (currentRoom.isAdminClaimable()) {
-                                currentRoom.claimAdmin(member.userId());
+                                final var secret = currentRoom.claimAdmin(member.userId());
+                                ackPacket = new JoinRoomAckPacket(true,
+                                        member.userId(),
+                                        true,
+                                        secret);
                             }
                             currentRoom.addMember(member);
                             log.info("[Socket %s] Created new user. ID: %s".formatted(socket.getId(), member.userId()));
                         }
-                        // ACK ответ на существование комнаты
-                        ackPacket = new JoinRoomAckPacket(true,
-                                member.userId(),
-                                currentRoom.isAdmin(member.userId()));
                     } else {
                         log.info("[Socket %s] tried non existent room %s".formatted(socket.getId(), joinRoomRequest.roomId()));
                     }

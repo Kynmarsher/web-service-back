@@ -7,6 +7,7 @@ import java.util.*;
 public class Room {
     private final String roomId;
     private String adminId = null;
+    private String adminSecret = null;
     private final Map<String, RoomMember> memberList;
 
     public Room() {
@@ -42,7 +43,13 @@ public class Room {
         return adminId == null;
     }
 
-    public void claimAdmin(String userId) {
+    public boolean checkAdminPerms(String passedSecret) {
+        return adminSecret.equals(passedSecret);
+    }
+
+    public String claimAdmin(String userId) {
         adminId = userId;
+        adminSecret = Utils.adminSecret();
+        return adminSecret;
     }
 }
