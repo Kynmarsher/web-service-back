@@ -192,8 +192,6 @@ public class WebServiceBack {
                                 currentRoom.isAdmin(member.userId()));
                         // Присоединяем его сокет к комнате как и самого пользователя
                         socket.joinRoom(joinRoomRequest.roomId());
-                        // Отправляем данные всем в комнате кроме самого клиента
-                        socket.broadcast(joinRoomRequest.roomId(), "joinRoom", msgArgs[0]);
                     } else {
                         log.info("[Client %s] tried non existent room %s".formatted(socket.getId(), joinRoomRequest.roomId()));
                     }
@@ -204,6 +202,15 @@ public class WebServiceBack {
                     }
                 } catch (Exception e) {
                     e.printStackTrace();
+                }
+            });
+
+            socket.on("startCall", msgArgs -> {
+                try {
+                    final var startCall = WebServiceBack.STRICT_MAPPER.readValue(msgArgs[0].toString(), StartCallPacket.class);
+                    socket.broadcast(startCall.roomId(), "startCall", msgArgs);
+                } catch (JsonProcessingException e) {
+                    throw new RuntimeException(e);
                 }
             });
 
