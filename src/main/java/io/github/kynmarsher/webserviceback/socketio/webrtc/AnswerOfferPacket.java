@@ -2,5 +2,5 @@ package io.github.kynmarsher.webserviceback.socketio.webrtc;
 
 import com.fasterxml.jackson.databind.JsonNode;
 
-public record IceCandidatePacket(String roomId, String sessionId, JsonNode iceCandidate) {
+public record AnswerOfferPacket(String roomId, String sessionId, String answerToId, JsonNode answerBody) {
 }

@@ -6,13 +6,12 @@ import java.util.*;
 
 public class Room {
     private final String roomId;
-    private final String adminId;
-    private final Map<String,RoomMember> memberList;
+    private String adminId = null;
+    private final Map<String, RoomMember> memberList;
 
-    public Room(String clientSocketId) {
-        roomId = Utils.nanoId();
+    public Room() {
+        roomId = Utils.roomId();
         memberList = new HashMap<>();
-        adminId = clientSocketId;
     }
 
     public String roomId() {
@@ -24,10 +23,18 @@ public class Room {
     }
 
     public void addMember(RoomMember member) {
-        memberList.put(member.memberId(), member);
+        memberList.put(member.userId(), member);
     }
 
-    public RoomMember getMember(String memberUUID) {
-        return memberList.get(memberUUID);
+    public RoomMember getMember(String memberId) {
+        return memberList.get(memberId);
+    }
+
+    public boolean isAdminClaimable() {
+        return adminId == null && memberList.isEmpty();
+    }
+
+    public void claimAdmin(String userId) {
+        adminId = userId;
     }
 }

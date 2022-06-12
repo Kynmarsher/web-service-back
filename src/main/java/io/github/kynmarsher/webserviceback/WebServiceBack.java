@@ -7,9 +7,8 @@ import io.github.kynmarsher.webserviceback.datamodel.Room;
 import io.github.kynmarsher.webserviceback.datamodel.RoomMember;
 import io.github.kynmarsher.webserviceback.socketio.chat.IncomingChatMessagePacket;
 import io.github.kynmarsher.webserviceback.socketio.room.*;
-import io.github.kynmarsher.webserviceback.socketio.webrtc.CreateOfferPacket;
-import io.github.kynmarsher.webserviceback.socketio.webrtc.IceCandidatePacket;
-import io.github.kynmarsher.webserviceback.socketio.webrtc.OfferAnswerPacket;
+import io.github.kynmarsher.webserviceback.socketio.webrtc.*;
+import io.github.kynmarsher.webserviceback.util.Utils;
 import io.socket.engineio.server.EngineIoServer;
 import io.socket.engineio.server.EngineIoServerOptions;
 import io.socket.engineio.server.JettyWebSocketHandler;
@@ -46,7 +45,7 @@ public class WebServiceBack {
     public static ObjectMapper STRICT_MAPPER;
     @Getter
     public Map<String, Room> roomList;
-    public Map<UUID, UUID> sessionId;
+    public Map<String, RoomMember> sessionList;
 
     private final EngineIoServer mEngineIoServer;
     private final EngineIoServerOptions eioOptions;
@@ -139,28 +138,21 @@ public class WebServiceBack {
         });
         mainNamespace.on("connection", arguments -> {
             SocketIoSocket socket = (SocketIoSocket) arguments[0];
-            log.info("[Client %s] connected".formatted(socket.getId()));
-
-            socket.on("message", msgArgs -> {
-                System.out.println("[Client " + socket.getId() + "] " + msgArgs);
-                // [Client sjdjjsdjsjd]
-                socket.send("message", "test message", 1);
-            });
+            log.info("[Socket %s] connected".formatted(socket.getId()));
 
             socket.on("createRoom", msgArgs -> {
                 try {
-                    final var createRoomRequest = WebServiceBack.STRICT_MAPPER.readValue(msgArgs[0].toString(), CreateRoomRequestPacket.class);
-                    log.info("[Client %s] requested room creation".formatted(socket.getId()));
-                    Room newRoom = new Room(socket.getId());
-                    // Сохраняем новую СВОЙ ОБЪЕКТ комнаты в список комнат
-                    // <id комнаты> -> Room
-                    WebServiceBack.INSTANCE.roomList().put(newRoom.roomId(), newRoom);
+                    // final var createRoomRequest = WebServiceBack.STRICT_MAPPER.readValue(msgArgs[0].toString(), CreateRoomRequestPacket.class);
+                    log.info("[Socket %s] requested room creation".formatted(socket.getId()));
+                    final var newRoom = new Room();
 
-                    final var responseObj = new CreateRoomResponsePacket(newRoom.roomId(), socket.getId());
+                    roomList.put(newRoom.roomId(), newRoom);
+
+                    final var responseObj = new CreateRoomResponsePacket(newRoom.roomId());
 
                     if (msgArgs[msgArgs.length - 1] instanceof SocketIoSocket.ReceivedByLocalAcknowledgementCallback callback) {
                         callback.sendAcknowledgement(dataToJson(responseObj));
-                        log.info("[Client %s] received the room %s".formatted(socket.getId(), responseObj.roomId()));
+                        log.info("[Socket %s] received the room %s".formatted(socket.getId(), responseObj.roomId()));
                     }
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -171,29 +163,38 @@ public class WebServiceBack {
                 try {
                     final var joinRoomRequest = WebServiceBack.STRICT_MAPPER.readValue(msgArgs[0].toString(), JoinRoomRequestPacket.class);
                     log.info("[Client %s] requested to join the room %s".formatted(socket.getId(), joinRoomRequest.roomId()));
-                    var responseObj = new JoinRoomAckPacket(false, socket.getId(), false, "Room doesn't exist yet or expired");
+                    // ACK ответ на случай если комнаты не существует
+                    var ackPacket = new JoinRoomAckPacket(false, "none", false);
 
-
+                    // Комната существует
                     if (roomList.containsKey(joinRoomRequest.roomId())) {
-                        responseObj = new JoinRoomAckPacket(false,
-                                socket.getId(),
-                                socket.getId().equals(roomList.get(joinRoomRequest.roomId()).adminId()),
-                                "Room doesn't exist yet or expired");
-                        // Присоединяем в своих комнатах
-                        roomList.get(joinRoomRequest.roomId()).addMember(new RoomMember(joinRoomRequest.name(),
+                        // ACK ответ на существование комнаты
+                        ackPacket = new JoinRoomAckPacket(true,
+                                Utils.sessionId(),
+                                roomList.get(joinRoomRequest.roomId()).isAdminClaimable());
+
+                        // Создаем нового пользователя
+                        final var newMember = new RoomMember(joinRoomRequest.name(),
                                 socket.getId(),
                                 joinRoomRequest.useVideo(),
-                                joinRoomRequest.useAudio()));
-                        // Присоединяем к сокет комнате
+                                joinRoomRequest.useAudio());
+
+                        // Добавляем пользователя в сессию
+                        sessionList.put(ackPacket.sessionId(), newMember);
+                        // Присоединяем его сокет к комнате как и самого пользователя
+                        roomList.get(joinRoomRequest.roomId()).addMember(newMember);
                         socket.joinRoom(joinRoomRequest.roomId());
                         // Отправляем данные всем в комнате кроме самого клиента
-                        socket.broadcast(joinRoomRequest.roomId(), "joinRoom", msgArgs[0]);
+                        // Создаем пакет для трансляции
+                        final var broadcastPacket = new JoinRoomBroadcastPacket(joinRoomRequest.roomId(), newMember.userId(), newMember.name(), newMember.video(), newMember.audio());
+                        // Отправляем
+                        socket.broadcast(joinRoomRequest.roomId(), "joinRoom", dataToJson(broadcastPacket));
                     } else {
                         log.info("[Client %s] tried non existent room %s".formatted(socket.getId(), joinRoomRequest.roomId()));
                     }
 
                     if (msgArgs[msgArgs.length - 1] instanceof SocketIoSocket.ReceivedByLocalAcknowledgementCallback callback) {
-                        callback.sendAcknowledgement(dataToJson(responseObj));
+                        callback.sendAcknowledgement(dataToJson(ackPacket));
                         log.info("[Client %s] joined the room %s".formatted(socket.getId(), joinRoomRequest.roomId()));
                     }
                 } catch (Exception e) {
@@ -205,15 +206,20 @@ public class WebServiceBack {
             socket.on("createOffer", msgArgs -> {
                 try {
                     final var offerPacket = WebServiceBack.STRICT_MAPPER.readValue(msgArgs[0].toString(), CreateOfferPacket.class);
-                    // Send Create offer to specific user
-                    log.info("[Clinet %s] [Room %s] sent offer to client %s".formatted(offerPacket.offerFrom(), offerPacket.roomId(), offerPacket.offerTo()));
+                    final var userOfferFrom = Optional.of(sessionList.get(offerPacket.sessionId()));
+                    userOfferFrom.ifPresent(user -> {
+                        // Отправляем пакет конкретному пользователю
+                        log.info("[Socket %s] [Room %s] %s sent offer to client %s".formatted(socket.getId(), offerPacket.roomId(), user.userId(), offerPacket.offerToId()));
 
-                    var clientOpt = Arrays.stream(mainNamespace.getAdapter().listClients(offerPacket.roomId()))
-                            .filter(client -> client.getId().equals(offerPacket.offerTo()))
-                            .reduce((a, b) -> null);
+                        // Найдем айди его сокета по user id, TODO: свернуть в одну функцию?
+                        final var socketId = roomList.get(offerPacket.roomId()).getMember(offerPacket.offerToId()).socketId();
+                        // Отправим ему сообщение
+                        Utils.userBySocketId(mainNamespace, offerPacket.roomId(), socketId).ifPresentOrElse(foundSocket -> {
+                            final var offerTranslate = new CreateOfferTranslatePacket(offerPacket.roomId(), offerPacket.name(), user.userId(), offerPacket.offerBody());
+                            foundSocket.send("createOffer", dataToJson(offerTranslate));
+                        }, () -> log.warn("No socket for requested user %s".formatted(socketId)));
+                    });
 
-                    clientOpt.ifPresentOrElse(client -> client.send("createOffer", msgArgs[0]),
-                            () -> log.info("[Client %s] don't know %s".formatted(socket.getId(), offerPacket.offerTo())));
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
@@ -222,13 +228,16 @@ public class WebServiceBack {
             // WebRTC
             socket.on("answerOffer", msgArgs -> {
                 try {
-                    final var offerAnswer = WebServiceBack.STRICT_MAPPER.readValue(msgArgs[0].toString(), OfferAnswerPacket.class);
-                    log.info("[Clinet %s] [Room %s] sent answer to %s".formatted(offerAnswer.answerFrom(), offerAnswer.roomId(), offerAnswer.answerTo()));
-                    var clientOpt = Arrays.stream(mainNamespace.getAdapter().listClients(offerAnswer.roomId()))
-                            .filter(client -> client.getId().equals(offerAnswer.answerTo()))
-                            .reduce((a, b) -> null);
-                    clientOpt.ifPresentOrElse(client -> client.send("answerOffer", msgArgs[0]), () -> {
-                        log.info("[Clinet %s] don't know %s".formatted(socket.getId(), offerAnswer.answerTo()));
+                    final var answerPacket = WebServiceBack.STRICT_MAPPER.readValue(msgArgs[0].toString(), AnswerOfferPacket.class);
+                    final var userAnswerFrom = Optional.of(sessionList.get(answerPacket.sessionId()));
+                    userAnswerFrom.ifPresent(user -> {
+                        log.info("[Socket %s] [Room %s] User %s sent answer to %s".formatted(socket.getId(), answerPacket.roomId(), userAnswerFrom, answerPacket.answerToId()));
+                        // Найдем айди его сокета по user id, TODO: свернуть в одну функцию?
+                        final var socketId = roomList.get(answerPacket.roomId()).getMember(answerPacket.answerToId()).socketId();
+                        Utils.userBySocketId(mainNamespace, answerPacket.roomId(), socketId).ifPresentOrElse(foundSocket -> {
+                            final var answerTranslate = new AnswerOfferTranslatePacket(answerPacket.roomId(), user.userId(), answerPacket.answerBody());
+                            foundSocket.send("createOffer", dataToJson(answerTranslate));
+                        }, () -> log.warn("No socket for requested user %s".formatted(socketId)));
                     });
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -239,7 +248,12 @@ public class WebServiceBack {
             socket.on("iceCandidate", msgArgs -> {
                 try {
                     final var iceCandidatePacket = WebServiceBack.STRICT_MAPPER.readValue(msgArgs[0].toString(), IceCandidatePacket.class);
-                    socket.broadcast(iceCandidatePacket.roomId(), "iceCandidate", msgArgs[0]);
+                    final var userIceFrom = Optional.of(sessionList.get(iceCandidatePacket.sessionId()));
+                    userIceFrom.ifPresent(user -> {
+                        final var iceTranslatePacket = new IceCandidateTranslatePacket(iceCandidatePacket.roomId(), user.userId(), iceCandidatePacket.iceCandidate());
+                        socket.broadcast(iceCandidatePacket.roomId(), "iceCandidate", dataToJson(iceTranslatePacket));
+                    });
+
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
