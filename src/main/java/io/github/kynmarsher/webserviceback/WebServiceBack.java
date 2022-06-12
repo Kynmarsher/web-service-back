@@ -224,6 +224,7 @@ public class WebServiceBack {
 
                     // Найдем айди его сокета по user id, TODO: свернуть в одну функцию?
                     final var socketId = roomList.get(offerPacket.roomId()).getMember(offerPacket.offerToId()).socketId();
+                    System.out.println("Socket Offer" + socketId);
                     // Отправим ему сообщение
                     Utils.userBySocketId(mainNamespace, offerPacket.roomId(), socketId).ifPresentOrElse(
                             foundSocket -> foundSocket.send("createOffer", msgArgs[0]),
@@ -242,7 +243,7 @@ public class WebServiceBack {
                     // Найдем айди его сокета по user id, TODO: свернуть в одну функцию?
                     final var socketId = roomList.get(answerPacket.roomId()).getMember(answerPacket.answerToId()).socketId();
                     Utils.userBySocketId(mainNamespace, answerPacket.roomId(), socketId).ifPresentOrElse(
-                            foundSocket -> foundSocket.send("createOffer", msgArgs[0]),
+                            foundSocket -> foundSocket.send("answerOffer", msgArgs[0]),
                             () -> log.warn("[Socket %s] No socket for requested user  %s on answerOffer".formatted(socket.getId(), socketId)));
                 } catch (Exception e) {
                     e.printStackTrace();
