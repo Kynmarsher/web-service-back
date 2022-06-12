@@ -35,7 +35,7 @@ public class Room {
     }
 
     public boolean isAdminClaimable() {
-        return adminId == null && memberList.isEmpty();
+        return adminId == null;
     }
 
     public void claimAdmin(String userId) {
