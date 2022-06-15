@@ -119,26 +119,6 @@ public class WebServiceBack {
             SocketIoSocket socket = (SocketIoSocket) arguments[0];
             log.info("[Socket %s] connected".formatted(socket.getId()));
 
-            socket.on("kickUser", msgArgs -> {
-                try {
-                    final var kickUserPacket = WebServiceBack.STRICT_MAPPER.readValue(msgArgs[0].toString(), KickUserPacket.class);
-                    var kickUserAck = new GenericAnswerPacket(false, "No such user");
-
-                    if (roomList.get(kickUserPacket.roomId()).checkAdminPerms(kickUserPacket.adminSecret())) {
-                        kickUserAck = new GenericAnswerPacket(true, "User is kicked");
-                        Utils.userBySocketId(mainNamespace, kickUserPacket.roomId(), roomList.get(kickUserPacket.roomId()).getMember(kickUserPacket.userToKick()))
-                                .ifPresentOrElse(
-                                        foundSocket -> foundSocket.send("kickUser", dataToJson(new NotifyKickPacket(kickUserPacket.userToKick()))),
-                                        () -> userNotFoundWarn(socket, kickUserPacket.userToKick(), "kickUser"));
-                    }
-                    if (msgArgs[msgArgs.length - 1] instanceof SocketIoSocket.ReceivedByLocalAcknowledgementCallback callback) {
-                        callback.sendAcknowledgement(dataToJson(kickUserAck));
-                    }
-                } catch (JsonProcessingException e) {
-                    throw new RuntimeException(e);
-                }
-            });
-
             socket.on("createRoom", msgArgs -> {
                 try {
                     // final var createRoomRequest = WebServiceBack.STRICT_MAPPER.readValue(msgArgs[0].toString(), CreateRoomRequestPacket.class);
@@ -283,6 +263,26 @@ public class WebServiceBack {
                     }
                 } catch (Exception e) {
                     e.printStackTrace();
+                }
+            });
+
+            socket.on("kickUser", msgArgs -> {
+                try {
+                    final var kickUserPacket = WebServiceBack.STRICT_MAPPER.readValue(msgArgs[0].toString(), KickUserPacket.class);
+                    var kickUserAck = new GenericAnswerPacket(false, "No such user");
+
+                    if (roomList.get(kickUserPacket.roomId()).checkAdminPerms(kickUserPacket.adminSecret())) {
+                        kickUserAck = new GenericAnswerPacket(true, "User is kicked");
+                        Utils.userBySocketId(mainNamespace, kickUserPacket.roomId(), roomList.get(kickUserPacket.roomId()).getMember(kickUserPacket.userToKick()))
+                                .ifPresentOrElse(
+                                        foundSocket -> foundSocket.send("kickUser", dataToJson(new NotifyKickPacket(kickUserPacket.userToKick()))),
+                                        () -> userNotFoundWarn(socket, kickUserPacket.userToKick(), "kickUser"));
+                    }
+                    if (msgArgs[msgArgs.length - 1] instanceof SocketIoSocket.ReceivedByLocalAcknowledgementCallback callback) {
+                        callback.sendAcknowledgement(dataToJson(kickUserAck));
+                    }
+                } catch (JsonProcessingException e) {
+                    throw new RuntimeException(e);
                 }
             });
         });
