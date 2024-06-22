@@ -121,9 +121,9 @@ public class WebServiceBack {
 
             socket.on("createRoom", msgArgs -> {
                 try {
-                    // final var createRoomRequest = WebServiceBack.STRICT_MAPPER.readValue(msgArgs[0].toString(), CreateRoomRequestPacket.class);
+                    final var createRoomRequest = WebServiceBack.STRICT_MAPPER.readValue(msgArgs[0].toString(), CreateRoomRequestPacket.class);
                     log.info("[Socket %s] requested room creation".formatted(socket.getId()));
-                    final var newRoom = new Room();
+                    final var newRoom = new Room(createRoomRequest.roomId());
 
                     roomList.put(newRoom.roomId(), newRoom);
 
@@ -156,6 +156,7 @@ public class WebServiceBack {
                             member = roomList.get(joinRoomRequest.roomId()).getMember(joinRoomRequest.userId());
                         } else {
                             member = new RoomMember(joinRoomRequest.name(),
+                                    joinRoomRequest.userId(),
                                     socket.getId(),
                                     joinRoomRequest.useVideo(),
                                     joinRoomRequest.useAudio());
@@ -280,6 +281,26 @@ public class WebServiceBack {
                     }
                     if (msgArgs[msgArgs.length - 1] instanceof SocketIoSocket.ReceivedByLocalAcknowledgementCallback callback) {
                         callback.sendAcknowledgement(dataToJson(kickUserAck));
+                    }
+                } catch (JsonProcessingException e) {
+                    throw new RuntimeException(e);
+                }
+            });
+
+            socket.on("deleteUser", msgArgs -> {
+                try {
+                    final var deleteUser = WebServiceBack.STRICT_MAPPER.readValue(msgArgs[0].toString(), DeleteUserPacket.class);
+                    var deleteUserAck = new GenericAnswerPacket(false, "No such user");
+                    log.info("пизда");
+
+                    RoomMember member;
+                    final var currentRoom = roomList.get(deleteUser.roomId());
+
+                    if (currentRoom.isMember(deleteUser.userToDelete())) {
+                        deleteUserAck = new GenericAnswerPacket(true, "User is deleted");
+                        member = roomList.get(deleteUser.roomId()).getMember(deleteUser.userToDelete());
+                        currentRoom.deleteMember(member);
+                        log.info("[Socket %s] User with ID: %s deleted from room".formatted(socket.getId(), member.userId()), deleteUser.roomId());
                     }
                 } catch (JsonProcessingException e) {
                     throw new RuntimeException(e);

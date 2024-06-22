@@ -10,8 +10,8 @@ public class Room {
     private String adminSecret = null;
     private final Map<String, RoomMember> memberList;
 
-    public Room() {
-        roomId = Utils.roomId();
+    public Room(String id) {
+        roomId = id;
         memberList = new HashMap<>();
     }
 
@@ -25,6 +25,10 @@ public class Room {
 
     public void addMember(RoomMember member) {
         memberList.put(member.userId(), member);
+    }
+
+    public void deleteMember(RoomMember member) {
+        memberList.remove(member.userId(), member);
     }
 
     public RoomMember getMember(String memberId) {

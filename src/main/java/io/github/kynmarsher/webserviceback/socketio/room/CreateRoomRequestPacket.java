@@ -1,4 +1,4 @@
 package io.github.kynmarsher.webserviceback.socketio.room;
 
-public record CreateRoomRequestPacket(String userId) {
+public record CreateRoomRequestPacket(String roomId) {
 }

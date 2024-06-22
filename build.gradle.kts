@@ -10,6 +10,7 @@ version = "1.0-SNAPSHOT"
 
 repositories {
     mavenCentral()
+    maven(url = "https://s01.oss.sonatype.org/content/repositories/snapshots/")
 }
 
 dependencies {
@@ -28,6 +29,7 @@ dependencies {
     implementation("org.eclipse.jetty:jetty-servlets:9.4.19.v20190610")
     implementation("commons-io:commons-io:2.11.0")
     implementation("com.aventrix.jnanoid:jnanoid:2.0.0")
+    implementation("io.appwrite:sdk-for-kotlin:5.0.2")
 }
 
 tasks.withType<ShadowJar> {
