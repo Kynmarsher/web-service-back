@@ -291,7 +291,6 @@ public class WebServiceBack {
                 try {
                     final var deleteUser = WebServiceBack.STRICT_MAPPER.readValue(msgArgs[0].toString(), DeleteUserPacket.class);
                     var deleteUserAck = new GenericAnswerPacket(false, "No such user");
-                    log.info("пизда");
 
                     RoomMember member;
                     final var currentRoom = roomList.get(deleteUser.roomId());
@@ -303,7 +302,25 @@ public class WebServiceBack {
                         log.info("[Socket %s] User with ID: %s deleted from room".formatted(socket.getId(), member.userId()), deleteUser.roomId());
                     }
                 } catch (JsonProcessingException e) {
-                    throw new RuntimeException(e);
+                    e.printStackTrace();
+                }
+            });
+            socket.on("toggleVideo", msgArgs -> {
+                try {
+                    final var toggleVideo = WebServiceBack.STRICT_MAPPER.readValue(msgArgs[0].toString(), ToggleVideoPacket.class);
+                    socket.broadcast(toggleVideo.roomId(), "toggleVideo", msgArgs[0]);
+                    log.info("[Socket %s] User with ID: %s toggle his Video in room %s".formatted(socket.getId(), toggleVideo.userId(), toggleVideo.roomId()));
+                } catch (JsonProcessingException e) {
+                    e.printStackTrace();
+                }
+            });
+            socket.on("toggleAudio", msgArgs -> {
+                try {
+                    final var toggleAudio = WebServiceBack.STRICT_MAPPER.readValue(msgArgs[0].toString(), ToggleAudioPacket.class);
+                    socket.broadcast(toggleAudio.roomId(), "toggleAudio", msgArgs[0]);
+                    log.info("[Socket %s] User with ID: %s toggle his Audio in room %s".formatted(socket.getId(), toggleAudio.userId(), toggleAudio.roomId()));
+                } catch (JsonProcessingException e) {
+                    e.printStackTrace();
                 }
             });
         });
