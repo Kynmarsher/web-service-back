@@ -3,6 +3,7 @@ package io.github.kynmarsher.webserviceback;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import io.appwrite.exceptions.AppwriteException;
 import io.github.kynmarsher.webserviceback.datamodel.Room;
 import io.github.kynmarsher.webserviceback.datamodel.RoomMember;
 import io.github.kynmarsher.webserviceback.socketio.admin.KickUserPacket;
@@ -26,6 +27,11 @@ import org.eclipse.jetty.server.handler.HandlerList;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 import org.eclipse.jetty.websocket.server.WebSocketUpgradeFilter;
+import io.appwrite.Client;
+import io.appwrite.coroutines.CoroutineCallback;
+import io.appwrite.services.Databases;
+import io.appwrite.services.Account;
+import io.appwrite.services.Users;
 
 import javax.servlet.DispatcherType;
 import javax.servlet.ServletException;
@@ -305,6 +311,7 @@ public class WebServiceBack {
                     e.printStackTrace();
                 }
             });
+
             socket.on("toggleVideo", msgArgs -> {
                 try {
                     final var toggleVideo = WebServiceBack.STRICT_MAPPER.readValue(msgArgs[0].toString(), ToggleVideoPacket.class);
@@ -314,6 +321,7 @@ public class WebServiceBack {
                     e.printStackTrace();
                 }
             });
+
             socket.on("toggleAudio", msgArgs -> {
                 try {
                     final var toggleAudio = WebServiceBack.STRICT_MAPPER.readValue(msgArgs[0].toString(), ToggleAudioPacket.class);
@@ -322,6 +330,30 @@ public class WebServiceBack {
                 } catch (JsonProcessingException e) {
                     e.printStackTrace();
                 }
+            });
+
+            socket.on("memberList", msgArgs -> {
+                    Client client = new Client()
+                            .setEndpoint("https://cloud.appwrite.io/v1") // Your API Endpoint
+                            .setProject("6655c51b002ccc6d11bf") //  Your project ID
+                            .setKey("7fca1b8980067089902b3f3c8119dde3e0e9cf24a0a98cac79f746467f137d340bac4c419f833f79ac414fbfd2cdc511f95f9e9c370dd422cb1ac8436ece7f60960983cff2885b5473f2b27c2820f720fedaa07f6c80eda4fe106cfa41d7af6997058059b2984084c0d6b85504454d32cd48e5f19f9df9256dc77c428b75e1a9"); // Your secret API key
+
+                    Users users = new Users(client);
+
+                    try {
+                        users.list(
+                                new CoroutineCallback<>((result, error) -> {
+                                    if (error != null) {
+                                        error.printStackTrace();
+                                        return;
+                                    } else{
+                                        socket.send("memberList", dataToJson(result.getUsers()));
+                                    }
+                                })
+                        );
+                    } catch (AppwriteException e) {
+                        throw new RuntimeException(e);
+                    }
             });
         });
     }
